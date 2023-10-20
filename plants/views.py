@@ -1,11 +1,11 @@
 from rest_framework import viewsets
-from .models import Plant
-from .serializers import PlantSerializer
+from .models import Plant,PlantDetection
+from .serializers import PlantSerializer, PlantDetectionSerializer
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-
+'''Klasifikasi'''
 def get_plant_image(request, plant_id):
     # Ambil objek tanaman berdasarkan ID
     plant = get_object_or_404(Plant, id=plant_id)
@@ -55,3 +55,8 @@ def delete_plant(request, plant_id):
     plant = get_object_or_404(Plant, id=plant_id)
     plant.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
+
+'''deteksi'''
+class PlantDetectionViewSet(viewsets.ModelViewSet):
+    queryset = PlantDetection.objects.all()
+    serializer_class = PlantDetectionSerializer
