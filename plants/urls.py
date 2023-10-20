@@ -1,5 +1,6 @@
 from django.urls import path, include
 from . import views
+from .views import PlantDetectionList, PlantDetectionDetail
 from django.contrib.auth.decorators import login_required
 from allauth.account.views import LoginView 
 
@@ -12,5 +13,9 @@ urlpatterns = [
     path('plants/<int:plant_id>/delete/', (views.delete_plant), name='delete_plant'),
     
     # api deteksi
+    path('plants/detection', PlantDetectionList.as_view(), name='plant-list'),
+    path('plants/<int:pk>/', PlantDetectionDetail.as_view(), name='plant-detail'),
+
+
 ]   
 

@@ -1,7 +1,7 @@
 from rest_framework import viewsets
 from .models import Plant,PlantDetection
 from .serializers import PlantSerializer, PlantDetectionSerializer
-from rest_framework import status
+from rest_framework import status,generics
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
@@ -57,6 +57,10 @@ def delete_plant(request, plant_id):
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 '''deteksi'''
-class PlantDetectionViewSet(viewsets.ModelViewSet):
+class PlantDetectionList(generics.ListCreateAPIView):
+    queryset = PlantDetection.objects.all()
+    serializer_class = PlantDetectionSerializer
+
+class PlantDetectionDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = PlantDetection.objects.all()
     serializer_class = PlantDetectionSerializer
