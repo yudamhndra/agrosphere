@@ -18,6 +18,5 @@ urlpatterns = [
 
     path('plants/detect', views.detect_plant_disease, name='plant-detect'),
 
-
 ]   
 
