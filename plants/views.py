@@ -1,9 +1,24 @@
-from rest_framework import viewsets
+import json
+import base64
+from io import BytesIO
+
+from django.core.handlers.wsgi import WSGIRequest
+from django.http.response import JsonResponse
 from .models import Plant,PlantDetection
+
+from rest_framework import viewsets
 from .serializers import PlantSerializer, PlantDetectionSerializer
-from rest_framework import status
+from rest_framework import status,generics
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+
+from ultralytics import YOLO
+from ultralytics.utils.plotting import Annotator
+from PIL import Image
+import numpy as np
+import cv2
+
+model = YOLO('best.pt')
 
 '''Klasifikasi'''
 def get_plant_image(request, plant_id):
@@ -57,6 +72,28 @@ def delete_plant(request, plant_id):
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 '''deteksi'''
-class PlantDetectionViewSet(viewsets.ModelViewSet):
+class PlantDetectionList(generics.ListCreateAPIView):
     queryset = PlantDetection.objects.all()
     serializer_class = PlantDetectionSerializer
+
+class PlantDetectionDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = PlantDetection.objects.all()
+    serializer_class = PlantDetectionSerializer
+
+def detect_plant_disease(request: WSGIRequest):
+    json_body = json.loads(request.body)
+    image = np.asarray(Image.open(BytesIO(base64.b64decode(json_body['image']))))
+    predict_result = model.predict(image)
+    cropped_images_base64 = []
+    for r in predict_result:
+        boxes = r.boxes
+        for box in boxes:
+            b = box.xyxy[0]  
+            c = box.cls        
+            cropped_image = image[int(b[1]):int(b[3]), int(b[0]):int(b[2])]
+            string_cropped = cv2.imencode('.png', cropped_image)[1].tostring()
+            cropped_images_base64.append((model.names[int(c)], base64.b64encode(string_cropped).decode('utf-8')))
+    response = {
+        'leafs': cropped_images_base64
+    }
+    return JsonResponse(response)
