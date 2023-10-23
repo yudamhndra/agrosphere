@@ -6,10 +6,10 @@ from django.core.handlers.wsgi import WSGIRequest
 from django.http.response import JsonResponse
 from django.shortcuts import *
 
-from .models import Plant, PlantDetection
+from .models import Plant, PlantDetection,Recomendation, Disease
 
 from rest_framework import viewsets
-from .serializers import PlantSerializer, PlantDetectionSerializer
+from .serializers import PlantSerializer, PlantDetectionSerializer, RecomendationSerializer, DiseaseSerializer
 from rest_framework import status, generics
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -115,3 +115,11 @@ def detect_plant_disease(request: WSGIRequest):
     }
 
     return make_response(data_response, message, 200)
+
+class DiseaseList(generics.ListCreateAPIView):
+    queryset = Disease.objects.all()
+    serializer_class = DiseaseSerializer
+
+class RecomendationList(generics.ListCreateAPIView):
+    queryset = Recomendation.objects.all()
+    serializer_class = RecomendationSerializer
