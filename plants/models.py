@@ -42,17 +42,17 @@ class Recomendation(models.Model):
     symptoms = models.CharField(max_length=255)
     recomendation = models.CharField(max_length=255, null=True)
     organic_control = models.CharField(max_length=255, null=True)
-    chemical_control_1 = models.CharField(max_length=255, null=True) #rekomendasi obat
-    chemical_control_2 = models.CharField(max_length=255, null=True)
-    chemical_control_3 = models.CharField(max_length=255, null=True)
-    chemical_control_4 = models.CharField(max_length=255, null=True)
-    chemical_control_5 = models.CharField(max_length=255, null=True)
-    chemical_control_1_dosage = models.CharField(max_length=255, null=True)
-    chemical_control_2_dosage = models.CharField(max_length=255, null=True)
-    chemical_control_3_dosage = models.CharField(max_length=255, null=True)
-    chemical_control_4_dosage = models.CharField(max_length=255, null=True)
-    chemical_control_5_dosage = models.CharField(max_length=255, null=True)
-    additional_info = models.CharField(max_length=255, null=True)
+    chemical_control_1 = models.TextField(null=True)
+    chemical_control_2 = models.TextField(null=True)
+    chemical_control_3 = models.TextField(null=True)
+    chemical_control_4 = models.TextField(null=True)
+    chemical_control_5 = models.TextField(null=True)
+    chemical_control_1_dosage = models.TextField(null=True)
+    chemical_control_2_dosage = models.TextField(null=True)
+    chemical_control_3_dosage = models.TextField(null=True)
+    chemical_control_4_dosage = models.TextField(null=True)
+    chemical_control_5_dosage = models.TextField(null=True)
+    additional_info = models.TextField(null=True)
     
     def __str__(self):
         return f"Recomendation for {self.disease_id.disease_type} - Symptoms: {self.symptoms}"
