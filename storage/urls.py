@@ -16,6 +16,9 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from authmanager.views import RegisterView, LoginView
+from storage import imageview
+from django.conf.urls.static import static
+from django.conf import settings
 
 urlpatterns = [
     path('', LoginView.as_view(), name='login'),
@@ -25,5 +28,6 @@ urlpatterns = [
     # auth api
     path('api/v1/register/', RegisterView.as_view(), name='register'),
     path('api/v1/login/', LoginView.as_view(), name='login'),
+    path('media/<str:file_path>/', imageview.serve_image, name='serve_image')
 ]
 

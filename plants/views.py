@@ -1,11 +1,13 @@
 import json
 import base64
+import os
 from io import BytesIO
 
 from django.core.handlers.wsgi import WSGIRequest
-from django.http.response import JsonResponse
+from django.http.response import JsonResponse, FileResponse
 from django.shortcuts import *
 
+from utils.file import base64_to_image_file
 from .models import Plant, PlantDetection,Recomendation, Disease
 
 from rest_framework import viewsets
@@ -92,29 +94,47 @@ class PlantDetectionDetail(generics.RetrieveUpdateDestroyAPIView):
 
 def detect_plant_disease(request: WSGIRequest):
     json_body = json.loads(request.body)
-    image = np.asarray(Image.open(BytesIO(base64.b64decode(json_body['image']))))
-    predict_result = model.predict(image)
+
+    image_data = base64.b64decode(json_body['image'])
+
+    if image_data is None:
+        return make_response(message="Image not found", status_code=404)
+
+    image = Image.open(BytesIO(image_data))
+    image_np = np.asarray(image)
+
+    base64_to_image_file(json_body['image'])
+
+    predict_result = model.predict(image_np)
     data_disease = []
     for r in predict_result:
         boxes = r.boxes
         for box in boxes:
             b = box.xyxy[0]
             c = box.cls
-            cropped_image = image[int(b[1]):int(b[3]), int(b[0]):int(b[2])]
+            cropped_image = image_np[int(b[1]):int(b[3]), int(b[0]):int(b[2])]
             string_cropped = cv2.imencode('.png', cropped_image)[1].tostring()
+
+            file_path = base64_to_image_file(base64.b64encode(string_cropped).decode('utf-8'), name='detected')
+
+            file_url = request.build_absolute_uri(file_path)
             data = {
                 'condition': model.names[int(c)],
-                'image_64': base64.b64encode(string_cropped).decode('utf-8')
+                'file_url': file_url
             }
             data_disease.append(data)
 
     message = "Penyakit tanaman berhasil dideteksi" if len(data_disease) > 0 else "Tidak ada penyakit yang terdeteksi"
+    status_code = status.HTTP_200_OK if len(data_disease) > 0 else status.HTTP_404_NOT_FOUND
 
     data_response = {
         'leafs': data_disease
     }
 
-    return make_response(data_response, message, 200)
+    print(data_response)
+
+    return make_response(data_response, message, status_code)
+
 
 class DiseaseList(generics.ListCreateAPIView):
     queryset = Disease.objects.all()
