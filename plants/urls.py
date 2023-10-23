@@ -16,6 +16,6 @@ urlpatterns = [
     path('plants/detection', PlantDetectionList.as_view(), name='plant-list'),
     path('plants/<int:pk>/', PlantDetectionDetail.as_view(), name='plant-detail'),
 
-
+    path('plants/detect', views.detect_plant_disease, name='plant-detect'),
 ]   
 

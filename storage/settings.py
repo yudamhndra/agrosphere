@@ -41,6 +41,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
     "127.0.0.1",
     "0.0.0.0",
+    '*'
 ]
 
 
@@ -69,7 +70,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
+    # "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -136,23 +137,23 @@ WSGI_APPLICATION = 'storage.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": get_secret("DATABASE_NAME"),
-        "USER": get_secret("DATABASE_USER"),
-        "PASSWORD": get_secret("DATABASE_PASSWORD"),
-        "HOST": "localhost",
-        "PORT": "3306",
-    }
-}
-
 # DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+#     "default": {
+#         "ENGINE": "django.db.backends.mysql",
+#         "NAME": get_secret("DATABASE_NAME"),
+#         "USER": get_secret("DATABASE_USER"),
+#         "PASSWORD": get_secret("DATABASE_PASSWORD"),
+#         "HOST": "localhost",
+#         "PORT": "3306",
 #     }
 # }
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    }
+}
 
 
 # Password validation
