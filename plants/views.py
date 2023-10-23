@@ -81,12 +81,9 @@ def delete_plant(request, plant_id):
 
 
 '''deteksi'''
-
-
 class PlantDetectionList(generics.ListCreateAPIView):
     queryset = PlantDetection.objects.all()
     serializer_class = PlantDetectionSerializer
-
 
 class PlantDetectionDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = PlantDetection.objects.all()
