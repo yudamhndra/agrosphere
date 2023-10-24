@@ -93,50 +93,6 @@ class PlantDetectionDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = PlantDetection.objects.all()
     serializer_class = PlantDetectionSerializer
 
-
-# def detect_plant_disease(request: WSGIRequest):
-    # json_body = json.loads(request.body)
-
-    # image_data = base64.b64decode(json_body['image'])
-
-    # if image_data is None:
-    #     return make_response(message="Image not found", status_code=404)
-
-    # image = Image.open(BytesIO(image_data))
-    # image_np = np.asarray(image)
-
-    # base64_to_image_file(json_body['image'])
-
-    # predict_result = model.predict(image_np)
-    # data_disease = []
-    # for r in predict_result:
-    #     boxes = r.boxes
-    #     for box in boxes:
-    #         b = box.xyxy[0]
-    #         c = box.cls
-    #         cropped_image = image_np[int(b[1]):int(b[3]), int(b[0]):int(b[2])]
-    #         string_cropped = cv2.imencode('.png', cropped_image)[1].tostring()
-
-    #         file_path = base64_to_image_file(base64.b64encode(string_cropped).decode('utf-8'), name='detected')
-
-    #         file_url = request.build_absolute_uri(file_path)
-    #         data = {
-    #             'condition': model.names[int(c)],
-    #             'file_url': file_url
-    #         }
-    #         data_disease.append(data)
-
-    # message = "Penyakit tanaman berhasil dideteksi" if len(data_disease) > 0 else "Tidak ada penyakit yang terdeteksi"
-    # status_code = status.HTTP_200_OK if len(data_disease) > 0 else status.HTTP_404_NOT_FOUND
-
-    # data_response = {
-    #     'leafs': data_disease
-    # }
-
-    # print(data_response)
-
-    # return make_response(data_response, message, status_code)
-
 def detect_plant_disease(request):
     if request.method == 'POST':
         try:
@@ -153,21 +109,17 @@ def detect_plant_disease(request):
                     cropped_image = image[int(b[1]):int(b[3]), int(b[0]):int(b[2])]
                     string_cropped = cv2.imencode('.png', cropped_image)[1].tostring()
 
-                    # Dapatkan kondisi dari model.names
                     condition = model.names[int(c)]
 
-                    # Cari penyakit yang sesuai dari tabel Disease
                     try:
                         disease = Disease.objects.get(disease_type=condition)
 
-                        # Dapatkan rekomendasi berdasarkan penyakit
                         try:
                             recomendation = Recomendation.objects.get(disease_id=disease)
                             data = {
                                 'condition': condition,
                                 'image_64': base64.b64encode(string_cropped).decode('utf-8'),
                                 'recomendation': recomendation.recomendation,
-                                # Tambahkan data lainnya dari tabel Recomendation sesuai kebutuhan
                             }
                             data_disease.append(data)
                         except Recomendation.DoesNotExist:
@@ -198,3 +150,5 @@ class DiseaseList(generics.ListCreateAPIView):
 class RecomendationList(generics.ListCreateAPIView):
     queryset = Recomendation.objects.all()
     serializer_class = RecomendationSerializer
+    
+
