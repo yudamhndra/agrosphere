@@ -5,10 +5,10 @@ from django.contrib.auth.models import User
 class Plant(models.Model):
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    plant_img = models.ImageField(upload_to='image/')  # Gunakan ImageField untuk menyimpan gambar
+    plant_img = models.CharField(max_length=255)
     plant_name = models.CharField(max_length=255)
     condition = models.CharField(max_length=255)
-    disease = models.CharField(max_length=255, blank=True, null=True)  # Memungkinkan nilai NULL
+    disease = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -19,7 +19,7 @@ class Plant(models.Model):
 class PlantDetection(models.Model):
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    plant_img = models.ImageField(upload_to='image/')
+    plant_img = models.CharField(max_length=255)
     plant_name = models.CharField(max_length=255)
     condition = models.CharField(max_length=255)
     disease = models.CharField(max_length=255, blank=True, null=True)
