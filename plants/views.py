@@ -9,8 +9,11 @@ import mimetypes
 from urllib.parse import urljoin
 
 from django.core.handlers.wsgi import WSGIRequest
-from django.http.response import JsonResponse
-from .models import Plant,PlantDetection
+from django.http.response import JsonResponse, FileResponse, HttpResponseNotFound, HttpResponseNotAllowed
+from django.conf import settings
+from django.db.models import F
+from django.urls import reverse as url_reverse
+from .models import Plant, PlantDetection,Recomendation, Disease
 
 from rest_framework import viewsets
 from .serializers import PlantSerializer, PlantDetectionSerializer, RecomendationSerializer, DiseaseSerializer
@@ -95,20 +98,104 @@ class PlantDetectionDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = PlantDetection.objects.all()
     serializer_class = PlantDetectionSerializer
 
-def detect_plant_disease(request: WSGIRequest):
+
+def download_media_file(request: WSGIRequest):
+    if request.method=='GET':
+        file_path = os.path.join(settings.MEDIA_ROOT, request.GET['filepath'])
+        if os.path.exists(file_path):
+            content_type, _ = mimetypes.guess_type(file_path)
+            response = FileResponse(open(file_path, 'rb'), content_type=content_type)
+            response['Content-Disposition'] = f'attachment; filename="{os.path.basename(file_path)}'
+            return response        
+        return HttpResponseNotFound(f'No file named {file_path}')
+    return HttpResponseNotAllowed('Invalid method')
+        
+
+def detect_plant_disease1(request: WSGIRequest):
     json_body = json.loads(request.body)
     image = np.asarray(Image.open(BytesIO(base64.b64decode(json_body['image']))))
     predict_result = model.predict(image)
-    cropped_images_base64 = []
+    cropped_images_urls = []
     for r in predict_result:
         boxes = r.boxes
         for box in boxes:
             b = box.xyxy[0]  
             c = box.cls        
             cropped_image = image[int(b[1]):int(b[3]), int(b[0]):int(b[2])]
-            string_cropped = cv2.imencode('.png', cropped_image)[1].tostring()
-            cropped_images_base64.append((model.names[int(c)], base64.b64encode(string_cropped).decode('utf-8')))
+            image_encoded = cv2.imencode('.png', cropped_image)[1]
+
+            # write image file
+            file_name = f'{time.time()}_{threading.get_native_id()}.png'
+            file_path = os.path.join(settings.MEDIA_ROOT, file_name)
+            cv2.imwrite(file_path, cropped_image)
+            
+            cropped_images_urls.append((model.names[int(c)], urljoin(f'http://{request.get_host()}', url_reverse('download-media-file'))+'?filepath='+file_name))
+            # cropped_images_base64.append((model.names[int(c)], base64.b64encode(string_cropped).decode('utf-8')))
     response = {
-        'leafs': cropped_images_base64
+        'leafs': cropped_images_urls
     }
+
     return JsonResponse(response)
+
+def detect_plant_disease(request):
+    if request.method == 'POST':
+        try:
+            json_body = json.loads(request.body)
+            image = np.asarray(Image.open(BytesIO(base64.b64decode(json_body['image']))))
+            predict_result = model.predict(image)
+            data_disease = []
+
+            for r in predict_result:
+                boxes = r.boxes
+                for box in boxes:
+                    b = box.xyxy[0]
+                    c = box.cls
+                    cropped_image = image[int(b[1]):int(b[3]), int(b[0]):int(b[2])]
+                    string_cropped = cv2.imencode('.png', cropped_image)[1].tostring()
+
+                    # Dapatkan kondisi dari model.names
+                    condition = model.names[int(c)]
+
+                    # Cari penyakit yang sesuai dari tabel Disease
+                    try:
+                        disease = Disease.objects.get(disease_type=condition)
+
+                        # Dapatkan rekomendasi berdasarkan penyakit
+                        try:
+                            recomendation = Recomendation.objects.get(disease_id=disease)
+                            data = {
+                                'condition': condition,
+                                'image_64': base64.b64encode(string_cropped).decode('utf-8'),
+                                'recomendation': recomendation.recomendation,
+                                # Tambahkan data lainnya dari tabel Recomendation sesuai kebutuhan
+                            }
+                            data_disease.append(data)
+                        except Recomendation.DoesNotExist:
+                            pass
+
+                    except Disease.DoesNotExist:
+                        pass
+
+            if len(data_disease) > 0:
+                message = "Penyakit tanaman berhasil dideteksi"
+            else:
+                message = "Tidak ada penyakit yang terdeteksi"
+
+            data_response = {
+                'leafs': data_disease
+            }
+
+            return JsonResponse({'data': data_response, 'message': message}, status=200)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    else:
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+class DiseaseList(generics.ListCreateAPIView):
+    queryset = Disease.objects.all()
+    serializer_class = DiseaseSerializer
+
+class RecomendationList(generics.ListCreateAPIView):
+    queryset = Recomendation.objects.all()
+    serializer_class = RecomendationSerializer
+
