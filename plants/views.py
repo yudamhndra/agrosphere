@@ -2,14 +2,17 @@ import json
 import base64
 import os
 from io import BytesIO
+import time
+import threading
+import os
+import mimetypes
+from urllib.parse import urljoin
 
 from django.core.handlers.wsgi import WSGIRequest
-from django.http.response import JsonResponse, FileResponse, HttpResponse
-from django.shortcuts import *
-from django.core.serializers import serialize
+from django.http.response import JsonResponse, FileResponse, HttpResponseNotFound, HttpResponseNotAllowed
+from django.conf import settings
 from django.db.models import F
-
-from utils.file import base64_to_image_file
+from django.urls import reverse as url_reverse
 from .models import Plant, PlantDetection,Recomendation, Disease
 
 from rest_framework import viewsets
@@ -26,7 +29,9 @@ import cv2
 
 from .utils import make_response
 
+print('Loading model...')
 model = YOLO('best.pt')
+print('Model Loaded!')
 
 '''Klasifikasi'''
 
@@ -93,6 +98,48 @@ class PlantDetectionDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = PlantDetection.objects.all()
     serializer_class = PlantDetectionSerializer
 
+<<<<<<< HEAD
+=======
+
+def download_media_file(request: WSGIRequest):
+    if request.method=='GET':
+        file_path = os.path.join(settings.MEDIA_ROOT, request.GET['filepath'])
+        if os.path.exists(file_path):
+            content_type, _ = mimetypes.guess_type(file_path)
+            response = FileResponse(open(file_path, 'rb'), content_type=content_type)
+            response['Content-Disposition'] = f'attachment; filename="{os.path.basename(file_path)}'
+            return response        
+        return HttpResponseNotFound(f'No file named {file_path}')
+    return HttpResponseNotAllowed('Invalid method')
+        
+
+def detect_plant_disease1(request: WSGIRequest):
+    json_body = json.loads(request.body)
+    image = np.asarray(Image.open(BytesIO(base64.b64decode(json_body['image']))))
+    predict_result = model.predict(image)
+    cropped_images_urls = []
+    for r in predict_result:
+        boxes = r.boxes
+        for box in boxes:
+            b = box.xyxy[0]  
+            c = box.cls        
+            cropped_image = image[int(b[1]):int(b[3]), int(b[0]):int(b[2])]
+            image_encoded = cv2.imencode('.png', cropped_image)[1]
+
+            # write image file
+            file_name = f'{time.time()}_{threading.get_native_id()}.png'
+            file_path = os.path.join(settings.MEDIA_ROOT, file_name)
+            cv2.imwrite(file_path, cropped_image)
+            
+            cropped_images_urls.append((model.names[int(c)], urljoin(f'http://{request.get_host()}', url_reverse('download-media-file'))+'?filepath='+file_name))
+            # cropped_images_base64.append((model.names[int(c)], base64.b64encode(string_cropped).decode('utf-8')))
+    response = {
+        'leafs': cropped_images_urls
+    }
+
+    return JsonResponse(response)
+
+>>>>>>> 5d4effcbd4c1e9cace5fb707aad5ca63f110ecda
 def detect_plant_disease(request):
     if request.method == 'POST':
         try:
@@ -150,5 +197,8 @@ class DiseaseList(generics.ListCreateAPIView):
 class RecomendationList(generics.ListCreateAPIView):
     queryset = Recomendation.objects.all()
     serializer_class = RecomendationSerializer
+<<<<<<< HEAD
     
+=======
+>>>>>>> 5d4effcbd4c1e9cace5fb707aad5ca63f110ecda
 

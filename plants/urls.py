@@ -17,9 +17,10 @@ urlpatterns = [
     path('plants/<int:pk>/', PlantDetectionDetail.as_view(), name='plant-detail'),
 
     path('plants/detect', views.detect_plant_disease, name='plant-detect'),
+    path('media/file', views.download_media_file, name='download-media-file'),
     
     #api recomendation
     path('diseases/', views.DiseaseList.as_view(), name='disease-list'),
     path('recomendations/', views.RecomendationList.as_view(), name='recomendation-list'),
-]   
+] 
 
