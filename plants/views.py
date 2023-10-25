@@ -98,6 +98,8 @@ class PlantDetectionDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = PlantDetection.objects.all()
     serializer_class = PlantDetectionSerializer
 
+<<<<<<< HEAD
+=======
 
 def download_media_file(request: WSGIRequest):
     if request.method=='GET':
@@ -137,6 +139,7 @@ def download_media_file(request: WSGIRequest):
 
 #     return JsonResponse(response)
 
+>>>>>>> 5d4effcbd4c1e9cace5fb707aad5ca63f110ecda
 def detect_plant_disease(request):
     if request.method == 'POST':
         try:
@@ -157,21 +160,17 @@ def detect_plant_disease(request):
                     file_path = os.path.join(settings.MEDIA_ROOT, file_name)
                     cv2.imwrite(file_path, cropped_image)
 
-                    # Dapatkan kondisi dari model.names
                     condition = model.names[int(c)]
 
-                    # Cari penyakit yang sesuai dari tabel Disease
                     try:
                         disease = Disease.objects.get(disease_type=condition)
 
-                        # Dapatkan rekomendasi berdasarkan penyakit
                         try:
                             recomendation = Recomendation.objects.get(disease_id=disease)
                             data = {
                                 'condition': condition,
                                 'image_uri': urljoin(f'http://{request.get_host()}', url_reverse('download-media-file'))+'?filepath='+file_name,
                                 'recomendation': recomendation.recomendation,
-                                # Tambahkan data lainnya dari tabel Recomendation sesuai kebutuhan
                             }
                             data_disease.append(data)
                         except Recomendation.DoesNotExist:
@@ -202,4 +201,8 @@ class DiseaseList(generics.ListCreateAPIView):
 class RecomendationList(generics.ListCreateAPIView):
     queryset = Recomendation.objects.all()
     serializer_class = RecomendationSerializer
+<<<<<<< HEAD
+    
+=======
+>>>>>>> 5d4effcbd4c1e9cace5fb707aad5ca63f110ecda
 
