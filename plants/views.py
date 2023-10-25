@@ -115,10 +115,28 @@ def download_media_file(request: WSGIRequest):
 def detect_plant_disease(request):
     if request.method == 'POST':
         try:
-            json_body = json.loads(request.body)
-            image = np.asarray(Image.open(BytesIO(base64.b64decode(json_body['image']))))
+            if 'image' in request.FILES:
+                # If an image is provided as a file attachment in form-data
+                uploaded_image = request.FILES['image'].read()
+                image = np.asarray(Image.open(BytesIO(uploaded_image)))
+            else:
+                try:
+                    json_body = json.loads(request.body)
+                    image_data = json_body.get('image')
+                    if image_data:
+                        image = np.asarray(Image.open(BytesIO(base64.b64decode(image_data))))
+                    else:
+                        return JsonResponse({'error': 'No image data provided in request.'}, status=400)
+                except json.JSONDecodeError:
+                    return JsonResponse({'error': 'Invalid JSON data in request body.'}, status=400)
+
+            print("predict")
+
+            # Now you can proceed with your detection logic using the 'image' variable
             predict_result = model.predict(image)
             data_disease = []
+            file_name = ""
+            condition = ""
 
             for r in predict_result:
                 boxes = r.boxes
@@ -171,6 +189,7 @@ def detect_plant_disease(request):
 
             return JsonResponse({'data': response, 'message': message}, status=200)
         except Exception as e:
+            print(e.__class__)
             return JsonResponse({'error': str(e)}, status=500)
     else:
         return JsonResponse({'error': 'Method not allowed'}, status=405)
