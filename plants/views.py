@@ -13,6 +13,7 @@ from django.http.response import JsonResponse, FileResponse, HttpResponseNotFoun
 from django.conf import settings
 from django.db.models import F
 from django.urls import reverse as url_reverse
+from django.utils import timezone
 from .models import Plant, PlantDetection,Recomendation, Disease
 
 from rest_framework import viewsets
@@ -139,9 +140,11 @@ def detect_plant_disease(request):
                         try:
                             recomendation = Recomendation.objects.get(disease_id=disease)
                             data = {
+                                'created_at': timezone.now(),
                                 'condition': condition,
                                 'image_uri': urljoin(f'http://{request.get_host()}', url_reverse('download-media-file'))+'?filepath='+file_name,
                                 'recomendation': recomendation.recomendation,
+                                
                             }
                             data_disease.append(data)
                         except Recomendation.DoesNotExist:
@@ -156,6 +159,7 @@ def detect_plant_disease(request):
                 message = "Tidak ada penyakit yang terdeteksi"
 
             data_response = {
+                'created_at': timezone.now(),
                 'leafs': data_disease
             }
 
@@ -164,6 +168,21 @@ def detect_plant_disease(request):
             return JsonResponse({'error': str(e)}, status=500)
     else:
         return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+def plant_detection_history(request):
+    history = PlantDetection.objects.order_by('-created_at')
+    serialized_history = []
+
+    for entry in history:
+        serialized_history.append({
+            'created_at': entry.created_at,
+            'plant_name': entry.plant_name,
+            'plant_image': entry.plant_img,
+            'condition': entry.condition,
+        })
+
+    return JsonResponse({'history': serialized_history})
+
 
 class DiseaseList(generics.ListCreateAPIView):
     queryset = Disease.objects.all()
