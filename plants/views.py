@@ -208,28 +208,4 @@ class RecomendationList(generics.ListCreateAPIView):
     queryset = Recomendation.objects.all()
     serializer_class = RecomendationSerializer
     
-def detect_plant_disease1(request: WSGIRequest):
-    json_body = json.loads(request.body)
-    image = np.asarray(Image.open(BytesIO(base64.b64decode(json_body['image']))))
-    predict_result = model.predict(image)
-    cropped_images_urls = []
-    for r in predict_result:
-        boxes = r.boxes
-        for box in boxes:
-            b = box.xyxy[0]  
-            c = box.cls        
-            cropped_image = image[int(b[1]):int(b[3]), int(b[0]):int(b[2])]
-            image_encoded = cv2.imencode('.png', cropped_image)[1]
 
-            # write image file
-            file_name = f'{time.time()}_{threading.get_native_id()}.png'
-            file_path = os.path.join(settings.MEDIA_ROOT, file_name)
-            cv2.imwrite(file_path, cropped_image)
-
-            cropped_images_urls.append((model.names[int(c)], urljoin(f'http://{request.get_host()}', url_reverse('download-media-file'))+'?filepath='+file_name))
-            # cropped_images_base64.append((model.names[int(c)], base64.b64encode(string_cropped).decode('utf-8')))
-    response = {
-        'leafs': cropped_images_urls
-    }
-
-    return JsonResponse(response)
