@@ -14,7 +14,7 @@ from django.conf import settings
 from django.db.models import F
 from django.urls import reverse as url_reverse
 from django.utils import timezone
-from .models import Plant, PlantDetection,Recomendation, Disease
+from .models import Plant, PlantDetection,Recomendation, Disease, Recomendation
 
 from rest_framework import viewsets
 from .serializers import PlantSerializer, PlantDetectionSerializer, RecomendationSerializer, DiseaseSerializer
@@ -127,15 +127,18 @@ def detect_plant_disease(request):
                     c = box.cls
                     cropped_image = image[int(b[1]):int(b[3]), int(b[0]):int(b[2])]
 
+                    # Simpan gambar ke dalam media dan ambil path file
                     file_name = f'{time.time()}_{threading.get_native_id()}.png'
                     file_path = os.path.join(settings.MEDIA_ROOT, file_name)
                     cv2.imwrite(file_path, cropped_image)
 
                     condition = model.names[int(c)]
 
+                    # Mencocokkan nama penyakit dengan tabel Disease
                     try:
                         disease = Disease.objects.get(disease_type=condition)
 
+                        # Mengambil data dari tabel Recomendation berdasarkan ID yang sesuai
                         try:
                             recomendation = Recomendation.objects.get(disease_id=disease)
                             data = {
@@ -151,35 +154,22 @@ def detect_plant_disease(request):
                     except Disease.DoesNotExist:
                         pass
 
-            cropped_images_urls = []
-            for r in predict_result:
-                boxes = r.boxes
-                for box in boxes:
-                    b = box.xyxy[0]
-                    c = box.cls
-                    cropped_image = image[int(b[1]):int(b[3]), int(b[0]):int(b[2])]
-                    image_encoded = cv2.imencode('.png', cropped_image)[1]
+            if len(data_disease) > 0:
+                message = "Penyakit tanaman berhasil dideteksi"
+            else:
+                message = "Tidak ada penyakit yang terdeteksi"
 
-                    # write image file
-                    file_name = f'{time.time()}_{threading.get_native_id()}.png'
-                    file_path = os.path.join(settings.MEDIA_ROOT, file_name)
-                    cv2.imwrite(file_path, cropped_image)
-
-                    cropped_images_urls.append((model.names[int(c)], urljoin(f'http://{request.get_host()}', url_reverse('download-media-file')) + '?filepath=' + file_name))
-                       
+            # Mengambil semua data dari tabel Recomendation
+            all_recomendations = Recomendation.objects.all().values()
+            
+            # Response yang menggabungkan hasil detection dan hasil dari fungsi detect_plant_disease1
             response = {
                 'created_at': timezone.now(),
-                'leafs_disease': cropped_images_urls,
+                'leafs_disease1': data_disease,
+                'all_recomendations': list(all_recomendations),
             }
-            
-            plant_detection = PlantDetection(
-                        user_id=1,
-                        plant_img=file_name,  
-                        condition=condition,
-                    ) 
-            plant_detection.save()
 
-            return JsonResponse({'data': response, 'message': 'Penyakit tanaman berhasil dideteksi'}, status=200)
+            return JsonResponse({'data': response, 'message': message}, status=200)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     else:
