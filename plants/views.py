@@ -127,7 +127,6 @@ def detect_plant_disease(request):
                     c = box.cls
                     cropped_image = image[int(b[1]):int(b[3]), int(b[0]):int(b[2])]
 
-                    # write image file
                     file_name = f'{time.time()}_{threading.get_native_id()}.png'
                     file_path = os.path.join(settings.MEDIA_ROOT, file_name)
                     cv2.imwrite(file_path, cropped_image)
@@ -142,9 +141,8 @@ def detect_plant_disease(request):
                             data = {
                                 'created_at': timezone.now(),
                                 'condition': condition,
-                                'image_uri': urljoin(f'http://{request.get_host()}', url_reverse('download-media-file'))+'?filepath='+file_name,
+                                'image_uri': urljoin(f'http://{request.get_host()}', url_reverse('download-media-file')) + '?filepath=' + file_name,
                                 'recomendation': recomendation.recomendation,
-                                
                             }
                             data_disease.append(data)
                         except Recomendation.DoesNotExist:
@@ -153,17 +151,36 @@ def detect_plant_disease(request):
                     except Disease.DoesNotExist:
                         pass
 
-            if len(data_disease) > 0:
-                message = "Penyakit tanaman berhasil dideteksi"
-            else:
-                message = "Tidak ada penyakit yang terdeteksi"
+            cropped_images_urls = []
+            for r in predict_result:
+                boxes = r.boxes
+                for box in boxes:
+                    b = box.xyxy[0]
+                    c = box.cls
+                    cropped_image = image[int(b[1]):int(b[3]), int(b[0]):int(b[2])]
+                    image_encoded = cv2.imencode('.png', cropped_image)[1]
 
-            data_response = {
+                    # write image file
+                    file_name = f'{time.time()}_{threading.get_native_id()}.png'
+                    file_path = os.path.join(settings.MEDIA_ROOT, file_name)
+                    cv2.imwrite(file_path, cropped_image)
+
+                    cropped_images_urls.append((model.names[int(c)], urljoin(f'http://{request.get_host()}', url_reverse('download-media-file')) + '?filepath=' + file_name))
+                       
+            response = {
                 'created_at': timezone.now(),
-                'leafs': data_disease
+                'leafs_disease': cropped_images_urls,
             }
+            
+            plant_detection = PlantDetection(
+                        user_id=1,
+                        plant_img=file_name,  
+                        condition=condition,
+                        disease='leafs_disease',
+                    ) 
+            plant_detection.save()
 
-            return JsonResponse({'data': data_response, 'message': message}, status=200)
+            return JsonResponse({'data': response, 'message': 'Penyakit tanaman berhasil dideteksi'}, status=200)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     else:
@@ -191,3 +208,29 @@ class DiseaseList(generics.ListCreateAPIView):
 class RecomendationList(generics.ListCreateAPIView):
     queryset = Recomendation.objects.all()
     serializer_class = RecomendationSerializer
+    
+def detect_plant_disease1(request: WSGIRequest):
+    json_body = json.loads(request.body)
+    image = np.asarray(Image.open(BytesIO(base64.b64decode(json_body['image']))))
+    predict_result = model.predict(image)
+    cropped_images_urls = []
+    for r in predict_result:
+        boxes = r.boxes
+        for box in boxes:
+            b = box.xyxy[0]  
+            c = box.cls        
+            cropped_image = image[int(b[1]):int(b[3]), int(b[0]):int(b[2])]
+            image_encoded = cv2.imencode('.png', cropped_image)[1]
+
+            # write image file
+            file_name = f'{time.time()}_{threading.get_native_id()}.png'
+            file_path = os.path.join(settings.MEDIA_ROOT, file_name)
+            cv2.imwrite(file_path, cropped_image)
+
+            cropped_images_urls.append((model.names[int(c)], urljoin(f'http://{request.get_host()}', url_reverse('download-media-file'))+'?filepath='+file_name))
+            # cropped_images_base64.append((model.names[int(c)], base64.b64encode(string_cropped).decode('utf-8')))
+    response = {
+        'leafs': cropped_images_urls
+    }
+
+    return JsonResponse(response)
