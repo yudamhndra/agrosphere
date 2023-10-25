@@ -28,6 +28,8 @@ urlpatterns = [
     # auth api
     path('api/v1/register/', RegisterView.as_view(), name='register'),
     path('api/v1/login/', LoginView.as_view(), name='login'),
-    path('media/<str:file_path>/', imageview.serve_image, name='serve_image')
 ]
+
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
 
