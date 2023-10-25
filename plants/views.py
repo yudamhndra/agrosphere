@@ -176,7 +176,6 @@ def detect_plant_disease(request):
                         user_id=1,
                         plant_img=file_name,  
                         condition=condition,
-                        disease='leafs_disease',
                     ) 
             plant_detection.save()
 
