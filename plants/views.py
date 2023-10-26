@@ -15,6 +15,7 @@ from django.db.models import F
 from django.urls import reverse as url_reverse
 from django.utils import timezone
 from .models import Plant, PlantDetection,Recomendation, Disease, Recomendation
+from django.core import serializers
 
 from rest_framework import viewsets
 from .serializers import PlantSerializer, PlantDetectionSerializer, RecomendationSerializer, DiseaseSerializer
@@ -107,10 +108,10 @@ def download_media_file(request: WSGIRequest):
             content_type, _ = mimetypes.guess_type(file_path)
             response = FileResponse(open(file_path, 'rb'), content_type=content_type)
             response['Content-Disposition'] = f'attachment; filename="{os.path.basename(file_path)}'
-            return response        
+            return response
         return HttpResponseNotFound(f'No file named {file_path}')
     return HttpResponseNotAllowed('Invalid method')
-        
+
 
 def detect_plant_disease(request):
     if request.method == 'POST':
@@ -151,7 +152,7 @@ def detect_plant_disease(request):
                     cv2.imwrite(file_path, cropped_image)
 
                     condition = model.names[int(c)]
-
+                    print("Condition " + condition)
                     # Mencocokkan nama penyakit dengan tabel Disease
                     try:
                         disease = Disease.objects.get(disease_type=condition)
@@ -159,11 +160,33 @@ def detect_plant_disease(request):
                         # Mengambil data dari tabel Recomendation berdasarkan ID yang sesuai
                         try:
                             recomendation = Recomendation.objects.get(disease_id=disease)
+
+                            # Create a dictionary representing the Recomendation object
+                            recomendation_dict = {
+                                'disease_type': disease.disease_type,
+                                'symptoms': recomendation.symptoms,
+                                'recomendation': recomendation.recomendation,
+                                'organic_control': recomendation.organic_control,
+                                'chemical_control_1': recomendation.chemical_control_1,
+                                'chemical_control_2': recomendation.chemical_control_2,
+                                'chemical_control_3': recomendation.chemical_control_3,
+                                'chemical_control_4': recomendation.chemical_control_4,
+                                'chemical_control_5': recomendation.chemical_control_5,
+                                'chemical_control_1_dosage': recomendation.chemical_control_1_dosage,
+                                'chemical_control_2_dosage': recomendation.chemical_control_2_dosage,
+                                'chemical_control_3_dosage': recomendation.chemical_control_3_dosage,
+                                'chemical_control_4_dosage': recomendation.chemical_control_4_dosage,
+                                'chemical_control_5_dosage': recomendation.chemical_control_5_dosage,
+                                'additional_info': recomendation.additional_info,
+                            }
+
+                            print(recomendation_dict)
+
                             data = {
                                 'created_at': timezone.now(),
                                 'condition': condition,
                                 'image_uri': urljoin(f'http://{request.get_host()}', url_reverse('download-media-file')) + '?filepath=' + file_name,
-                                'recomendation': recomendation.recomendation,
+                                'recomendation': recomendation_dict
                             }
                             data_disease.append(data)
                         except Recomendation.DoesNotExist:
@@ -179,7 +202,7 @@ def detect_plant_disease(request):
 
             # Mengambil semua data dari tabel Recomendation
             all_recomendations = Recomendation.objects.all().values()
-            
+
             # Response yang menggabungkan hasil detection dan hasil dari fungsi detect_plant_disease1
             response = {
                 'created_at': timezone.now(),
@@ -187,13 +210,13 @@ def detect_plant_disease(request):
                 'all_recomendations': list(all_recomendations),
             }
 
-            return JsonResponse({'data': response, 'message': message}, status=200)
+            return JsonResponse({'data': response, 'message': message}, status=200,  safe=False)
         except Exception as e:
             print(e.__class__)
             return JsonResponse({'error': str(e)}, status=500)
     else:
         return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
+
 def plant_detection_history(request):
     history = PlantDetection.objects.order_by('-created_at')
     serialized_history = []
@@ -216,5 +239,5 @@ class DiseaseList(generics.ListCreateAPIView):
 class RecomendationList(generics.ListCreateAPIView):
     queryset = Recomendation.objects.all()
     serializer_class = RecomendationSerializer
-    
+
 
