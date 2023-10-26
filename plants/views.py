@@ -14,11 +14,14 @@ from django.conf import settings
 from django.db.models import F
 from django.urls import reverse as url_reverse
 from django.utils import timezone
-from .models import Plant, PlantDetection,Recomendation, Disease, Recomendation, Notification
+
+from firebase.auth_firebase import send_topic_push
+from .models import Plant, PlantDetection, Recomendation, Disease, Recomendation, Notification
 from django.core import serializers
 
 from rest_framework import viewsets
-from .serializers import PlantSerializer, PlantDetectionSerializer, RecomendationSerializer, DiseaseSerializer, NotificationSerializer
+from .serializers import PlantSerializer, PlantDetectionSerializer, RecomendationSerializer, DiseaseSerializer, \
+    NotificationSerializer
 from rest_framework import status, generics
 from rest_framework.decorators import api_view, action
 from rest_framework.response import Response
@@ -92,9 +95,12 @@ def delete_plant(request, plant_id):
 
 
 '''deteksi'''
+
+
 class PlantDetectionList(generics.ListCreateAPIView):
     queryset = PlantDetection.objects.all()
     serializer_class = PlantDetectionSerializer
+
 
 class PlantDetectionDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = PlantDetection.objects.all()
@@ -102,7 +108,7 @@ class PlantDetectionDetail(generics.RetrieveUpdateDestroyAPIView):
 
 
 def download_media_file(request: WSGIRequest):
-    if request.method=='GET':
+    if request.method == 'GET':
         file_path = os.path.join(settings.MEDIA_ROOT, request.GET['filepath'])
         if os.path.exists(file_path):
             content_type, _ = mimetypes.guess_type(file_path)
@@ -127,7 +133,8 @@ def detect_plant_disease(request):
                     if image_data:
                         image = np.asarray(Image.open(BytesIO(base64.b64decode(image_data))))
                     else:
-                        return make_response({}, "No image data provided in request", 400, {'error': 'No image data provided in request.'})
+                        return make_response({}, "No image data provided in request", 400,
+                                             {'error': 'No image data provided in request.'})
                 except json.JSONDecodeError:
                     return make_response({}, "Invalid JSON data in request body", 400,
                                          {'error': 'Invalid JSON data in request body.'})
@@ -183,12 +190,21 @@ def detect_plant_disease(request):
 
                             print(recomendation_dict)
 
+                            image_uri = urljoin(f'http://{request.get_host()}', 'media/') + file_name
+
                             data = {
                                 'created_at': timezone.now(),
                                 'condition': condition,
-                                'image_uri': urljoin(f'http://{request.get_host()}', 'media/') + file_name,
+                                'image_uri': image_uri,
                                 'recomendation': recomendation_dict
                             }
+
+                            send_topic_push(
+                                'Penyakit Terdeteksi',
+                                f'Ada penyakit pada tanaman anda dengan jenis {condition}. Silahkan cek aplikasi untuk informasi lebih lanjut.',
+                                image_uri
+                            )
+
                             data_disease.append(data)
                         except Recomendation.DoesNotExist:
                             pass
@@ -218,6 +234,7 @@ def detect_plant_disease(request):
     else:
         return make_response({}, "Method not allowed", 405, {'error': 'Method not allowed'})
 
+
 def plant_detection_history(request):
     history = PlantDetection.objects.order_by('-created_at')
     serialized_history = []
@@ -237,10 +254,12 @@ class DiseaseList(generics.ListCreateAPIView):
     queryset = Disease.objects.all()
     serializer_class = DiseaseSerializer
 
+
 class RecomendationList(generics.ListCreateAPIView):
     queryset = Recomendation.objects.all()
     serializer_class = RecomendationSerializer
-    
+
+
 @api_view(['POST'])
 def notification(request):
     serializer = NotificationSerializer(data=request.data)
@@ -257,6 +276,7 @@ def notification(request):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 @api_view(['GET', 'POST'])
 def notificationHistory(request):
     if request.method == 'GET':
@@ -264,7 +284,7 @@ def notificationHistory(request):
         notifications = Notification.objects.all()
         serializer = NotificationSerializer(notifications, many=True)
         return Response(serializer.data)
-    
+
     elif request.method == 'POST':
         serializer = NotificationSerializer(data=request.data)
         if serializer.is_valid():
@@ -279,4 +299,3 @@ def notificationHistory(request):
             serializer.save()
             return Response(response_data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
