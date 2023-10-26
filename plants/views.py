@@ -14,13 +14,13 @@ from django.conf import settings
 from django.db.models import F
 from django.urls import reverse as url_reverse
 from django.utils import timezone
-from .models import Plant, PlantDetection,Recomendation, Disease, Recomendation
+from .models import Plant, PlantDetection,Recomendation, Disease, Recomendation, Notification
 from django.core import serializers
 
 from rest_framework import viewsets
-from .serializers import PlantSerializer, PlantDetectionSerializer, RecomendationSerializer, DiseaseSerializer
+from .serializers import PlantSerializer, PlantDetectionSerializer, RecomendationSerializer, DiseaseSerializer, NotificationSerializer
 from rest_framework import status, generics
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, action
 from rest_framework.response import Response
 
 from ultralytics import YOLO
@@ -240,5 +240,43 @@ class DiseaseList(generics.ListCreateAPIView):
 class RecomendationList(generics.ListCreateAPIView):
     queryset = Recomendation.objects.all()
     serializer_class = RecomendationSerializer
+    
+@api_view(['POST'])
+def notification(request):
+    serializer = NotificationSerializer(data=request.data)
+    if serializer.is_valid():
+        title = serializer.validated_data.get('title')
+        description = serializer.validated_data.get('description')
 
+        response_data = {
+            'title': title,
+            'description': description,
+        }
+
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET', 'POST'])
+def notificationHistory(request):
+    if request.method == 'GET':
+        # Mendapatkan semua notifikasi dari database
+        notifications = Notification.objects.all()
+        serializer = NotificationSerializer(notifications, many=True)
+        return Response(serializer.data)
+    
+    elif request.method == 'POST':
+        serializer = NotificationSerializer(data=request.data)
+        if serializer.is_valid():
+            title = serializer.validated_data.get('title')
+            description = serializer.validated_data.get('description')
+
+            response_data = {
+                'title': title,
+                'description': description,
+            }
+
+            serializer.save()
+            return Response(response_data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

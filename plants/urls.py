@@ -1,6 +1,6 @@
 from django.urls import path, include
 from . import views
-from .views import PlantDetectionList, PlantDetectionDetail, RecomendationList, DiseaseList, plant_detection_history
+from .views import PlantDetectionList, PlantDetectionDetail, RecomendationList, DiseaseList, plant_detection_history, notification
 from django.contrib.auth.decorators import login_required
 from allauth.account.views import LoginView 
 
@@ -23,5 +23,10 @@ urlpatterns = [
     #api recomendation
     path('diseases/', views.DiseaseList.as_view(), name='disease-list'),
     path('recomendations/', views.RecomendationList.as_view(), name='recomendation-list'),
+    
+    #notif
+    path('notification/', notification, name='notification'),
+    path('notification/history/', views.notificationHistory, name='notification'),
+    
 ] 
 
