@@ -127,9 +127,10 @@ def detect_plant_disease(request):
                     if image_data:
                         image = np.asarray(Image.open(BytesIO(base64.b64decode(image_data))))
                     else:
-                        return JsonResponse({'error': 'No image data provided in request.'}, status=400)
+                        return make_response({}, "No image data provided in request", 400, {'error': 'No image data provided in request.'})
                 except json.JSONDecodeError:
-                    return JsonResponse({'error': 'Invalid JSON data in request body.'}, status=400)
+                    return make_response({}, "Invalid JSON data in request body", 400,
+                                         {'error': 'Invalid JSON data in request body.'})
 
             print("predict")
 
@@ -185,7 +186,7 @@ def detect_plant_disease(request):
                             data = {
                                 'created_at': timezone.now(),
                                 'condition': condition,
-                                'image_uri': urljoin(f'http://{request.get_host()}', url_reverse('download-media-file')) + '?filepath=' + file_name,
+                                'image_uri': urljoin(f'http://{request.get_host()}', 'media/') + file_name,
                                 'recomendation': recomendation_dict
                             }
                             data_disease.append(data)
@@ -206,16 +207,16 @@ def detect_plant_disease(request):
             # Response yang menggabungkan hasil detection dan hasil dari fungsi detect_plant_disease1
             response = {
                 'created_at': timezone.now(),
-                'leafs_disease1': data_disease,
+                'leafs_disease': data_disease,
                 'all_recomendations': list(all_recomendations),
             }
 
-            return JsonResponse({'data': response, 'message': message}, status=200,  safe=False)
+            return make_response(response, message, 200)
         except Exception as e:
             print(e.__class__)
-            return JsonResponse({'error': str(e)}, status=500)
+            return make_response({}, "Error Exception", 500, str(e))
     else:
-        return JsonResponse({'error': 'Method not allowed'}, status=405)
+        return make_response({}, "Method not allowed", 405, {'error': 'Method not allowed'})
 
 def plant_detection_history(request):
     history = PlantDetection.objects.order_by('-created_at')
