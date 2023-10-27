@@ -23,10 +23,10 @@ urlpatterns = [
     #api recomendation
     path('diseases/', views.DiseaseList.as_view(), name='disease-list'),
     path('recomendations/', views.RecomendationList.as_view(), name='recomendation-list'),
-    
+
     #notif
     path('notification/', notification, name='notification'),
-    path('notification/history/', views.notificationHistory, name='notification'),
+    path('notification/history/', views.notificationHistory, name='notification-history'),
     
 ] 
 

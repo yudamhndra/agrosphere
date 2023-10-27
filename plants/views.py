@@ -273,8 +273,8 @@ def notification(request):
         }
 
         serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return make_response(response_data, "Notifikasi berhasil dikirim", 201)
+    return make_response(serializer.errors, "Notifikasi gagal dikirim", 400)
 
 
 @api_view(['GET', 'POST'])
@@ -283,7 +283,7 @@ def notificationHistory(request):
         # Mendapatkan semua notifikasi dari database
         notifications = Notification.objects.all()
         serializer = NotificationSerializer(notifications, many=True)
-        return Response(serializer.data)
+        return make_response(serializer.data, "Notification History", 200)
 
     elif request.method == 'POST':
         serializer = NotificationSerializer(data=request.data)
@@ -297,5 +297,5 @@ def notificationHistory(request):
             }
 
             serializer.save()
-            return Response(response_data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return make_response(response_data, "Notification History", 200)
+        return make_response(None, "Notification History", 400, serializer.errors)
