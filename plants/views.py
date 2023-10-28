@@ -16,7 +16,7 @@ from django.urls import reverse as url_reverse
 from django.utils import timezone
 
 from firebase.auth_firebase import send_topic_push
-from .models import Plant, PlantDetection, Recomendation, Disease, Recomendation, Notification
+from .models import Plant, PlantDetection, Recomendation, Disease, Recomendation, Notification, Plant
 from django.core import serializers
 
 from rest_framework import viewsets
@@ -36,6 +36,7 @@ from .utils import make_response
 
 print('Loading model...')
 model = YOLO('best.pt')
+segmentation_model = YOLO('segmentation_best.pt')
 print('Model Loaded!')
 
 '''Klasifikasi'''
@@ -166,9 +167,132 @@ def detect_plant_disease(request):
                         user_id=1, 
                         plant_img=file_name,
                         plant_name="strawberry",  # Ganti dengan nama tanaman yang sesuai
-                        disease=condition,
+                        condition=condition,
                     )
                     plant_detection.save()
+                    # Mencocokkan nama penyakit dengan tabel Disease
+                    try:
+                        disease = Disease.objects.get(disease_type=condition)
+
+                        # Mengambil data dari tabel Recomendation berdasarkan ID yang sesuai
+                        try:
+                            recomendation = Recomendation.objects.get(disease_id=disease)
+
+                            # Create a dictionary representing the Recomendation object
+                            recomendation_dict = {
+                                'disease_type': disease.disease_type,
+                                'symptoms': recomendation.symptoms,
+                                'recomendation': recomendation.recomendation,
+                                'organic_control': recomendation.organic_control,
+                                'chemical_control_1': recomendation.chemical_control_1,
+                                'chemical_control_2': recomendation.chemical_control_2,
+                                'chemical_control_3': recomendation.chemical_control_3,
+                                'chemical_control_4': recomendation.chemical_control_4,
+                                'chemical_control_5': recomendation.chemical_control_5,
+                                'chemical_control_1_dosage': recomendation.chemical_control_1_dosage,
+                                'chemical_control_2_dosage': recomendation.chemical_control_2_dosage,
+                                'chemical_control_3_dosage': recomendation.chemical_control_3_dosage,
+                                'chemical_control_4_dosage': recomendation.chemical_control_4_dosage,
+                                'chemical_control_5_dosage': recomendation.chemical_control_5_dosage,
+                                'additional_info': recomendation.additional_info,
+                            }
+
+                            print(recomendation_dict)
+
+                            image_uri = urljoin(f'http://{request.get_host()}', 'media/') + file_name
+
+                            data = {
+                                'created_at': timezone.now(),
+                                'condition': condition,
+                                'image_uri': image_uri,
+                                'recomendation': recomendation_dict
+                            }
+
+                            send_topic_push(
+                                'Penyakit Terdeteksi',
+                                f'Ada penyakit pada tanaman anda dengan jenis {condition}. Silahkan cek aplikasi untuk informasi lebih lanjut.',
+                                image_uri
+                            )
+
+                            data_disease.append(data)
+                        except Recomendation.DoesNotExist:
+                            pass
+
+                    except Disease.DoesNotExist:
+                        pass
+
+            if len(data_disease) > 0:
+                message = "Penyakit tanaman berhasil dideteksi"
+            else:
+                message = "Tidak ada penyakit yang terdeteksi"
+
+            # Mengambil semua data dari tabel Recomendation
+            # all_recomendations = Recomendation.objects.all().values()
+
+            # Response yang menggabungkan hasil detection dan hasil dari fungsi detect_plant_disease1
+            response = {
+                'created_at': timezone.now(),
+                'leafs_disease': data_disease,
+                # 'all_recomendations': list(all_recomendations),
+            }
+
+            return make_response(response, message, 200)
+        except Exception as e:
+            print(e.__class__)
+            return make_response({}, "Error Exception", 500, str(e))
+    else:
+        return make_response({}, "Method not allowed", 405, {'error': 'Method not allowed'})
+
+def plants_segmentation(request):
+    if request.method == 'POST':
+        try:
+            if 'image' in request.FILES:
+                # If an image is provided as a file attachment in form-data
+                uploaded_image = request.FILES['image'].read()
+                image = np.asarray(Image.open(BytesIO(uploaded_image)))
+            else:
+                try:
+                    json_body = json.loads(request.body)
+                    image_data = json_body.get('image')
+                    if image_data:
+                        image = np.asarray(Image.open(BytesIO(base64.b64decode(image_data))))
+                    else:
+                        return make_response({}, "No image data provided in request", 400,
+                                             {'error': 'No image data provided in request.'})
+                except json.JSONDecodeError:
+                    return make_response({}, "Invalid JSON data in request body", 400,
+                                         {'error': 'Invalid JSON data in request body.'})
+
+            print("predict")
+
+            # Now you can proceed with your detection logic using the 'image' variable
+            predict_result = segmentation_model.predict(image)
+            data_disease = []
+            file_name = ""
+            condition = ""
+
+            for r in predict_result:
+                boxes = r.boxes
+                for box in boxes:
+                    b = box.xyxy[0]
+                    c = box.cls
+                    cropped_image = image[int(b[1]):int(b[3]), int(b[0]):int(b[2])]
+
+                    # Simpan gambar ke dalam media dan ambil path file
+                    file_name = f'{time.time()}_{threading.get_native_id()}.png'
+                    file_path = os.path.join(settings.MEDIA_ROOT, file_name)
+                    cv2.imwrite(file_path, cropped_image)
+
+                    condition = segmentation_model.names[int(c)]
+                    print("Condition " + condition)
+                    
+                    plant_clasification = Plant(
+                        user_id=1, 
+                        plant_img=file_name,
+                        plant_name="strawberry",  # Ganti dengan nama tanaman yang sesuai
+                        condition=condition,
+                    )
+                    plant_clasification.save()
                     # Mencocokkan nama penyakit dengan tabel Disease
                     try:
                         disease = Disease.objects.get(disease_type=condition)
