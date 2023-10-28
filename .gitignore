@@ -188,4 +188,5 @@ fabric.properties
 media
 
 #node
-node_modules
+/node_modules/
+
