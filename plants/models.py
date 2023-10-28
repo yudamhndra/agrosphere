@@ -28,6 +28,18 @@ class PlantDetection(models.Model):
 
     def __str__(self):
         return f"{self.plant_name}/{self.condition}/{self.disease}"
+
+class DetectionHistory(models.Model):
+    id = models.AutoField(primary_key=True)
+    source = models.CharField(max_length=255)
+    plant_img = models.CharField(max_length=255)
+    plant_name = models.CharField(max_length=255)
+    condition = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.source} - {self.plant_name} ({self.condition})"
     
 class Disease(models.Model):
     id = models.AutoField(primary_key=True)

@@ -185,5 +185,7 @@ fabric.properties
 
 # idea folder, uncomment if you don't need it
 # .idea
-
 media
+
+#node
+node_modules
