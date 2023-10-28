@@ -11,7 +11,7 @@ device_token: str = os.getenv("ANDROID_DEVICE_TOKEN1")
 
 
 def send_topic_push(title, body, image=None):
-    topic = "detection_1"
+    topic = "detection_2"
     message = messaging.Message(
         notification=messaging.Notification(title=title, body=body),
         topic=topic

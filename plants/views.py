@@ -161,6 +161,14 @@ def detect_plant_disease(request):
 
                     condition = model.names[int(c)]
                     print("Condition " + condition)
+                    
+                    plant_detection = PlantDetection(
+                        user_id=1, 
+                        plant_img=file_name,
+                        plant_name="strawberry",  # Ganti dengan nama tanaman yang sesuai
+                        disease=condition,
+                    )
+                    plant_detection.save()
                     # Mencocokkan nama penyakit dengan tabel Disease
                     try:
                         disease = Disease.objects.get(disease_type=condition)
@@ -218,13 +226,13 @@ def detect_plant_disease(request):
                 message = "Tidak ada penyakit yang terdeteksi"
 
             # Mengambil semua data dari tabel Recomendation
-            all_recomendations = Recomendation.objects.all().values()
+            # all_recomendations = Recomendation.objects.all().values()
 
             # Response yang menggabungkan hasil detection dan hasil dari fungsi detect_plant_disease1
             response = {
                 'created_at': timezone.now(),
                 'leafs_disease': data_disease,
-                'all_recomendations': list(all_recomendations),
+                # 'all_recomendations': list(all_recomendations),
             }
 
             return make_response(response, message, 200)
@@ -273,8 +281,8 @@ def notification(request):
         }
 
         serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return make_response(response_data, "Notifikasi berhasil dikirim", 201)
+    return make_response(serializer.errors, "Notifikasi gagal dikirim", 400)
 
 
 @api_view(['GET', 'POST'])
@@ -283,7 +291,7 @@ def notificationHistory(request):
         # Mendapatkan semua notifikasi dari database
         notifications = Notification.objects.all()
         serializer = NotificationSerializer(notifications, many=True)
-        return Response(serializer.data)
+        return make_response(serializer.data, "Notification History", 200)
 
     elif request.method == 'POST':
         serializer = NotificationSerializer(data=request.data)
@@ -297,5 +305,5 @@ def notificationHistory(request):
             }
 
             serializer.save()
-            return Response(response_data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return make_response(response_data, "Notification History", 200)
+        return make_response(None, "Notification History", 400, serializer.errors)
