@@ -285,16 +285,10 @@ def apply_segmentation_mask(original_image, mask):
 
     return masked_image
 
-
-
-
-    
 def plants_segmentation(request):
     if request.method == 'POST':
         try:
-            data_disease_detection = []  # Inisialisasi data_disease_detection untuk deteksi penyakit
             data_disease_segmentation = []  # Inisialisasi data_disease_segmentation untuk segmentasi
-            file_name_detection = ""
             file_name_segmentation = ""
 
             if 'image' in request.FILES:
@@ -310,68 +304,6 @@ def plants_segmentation(request):
                         return JsonResponse({'data': {}, 'status': False, 'message': 'No image data provided in request', 'error_data': 'No image data provided in request.'}, status=400)
                 except json.JSONDecodeError:
                     return JsonResponse({'data': {}, 'status': False, 'message': 'Invalid JSON data in request body', 'error_data': 'Invalid JSON data in request body.'}, status=400)
-
-            print("predict_detection")
-            # Melakukan deteksi penyakit
-            predict_result_detection = model.predict(image)
-
-            for r in predict_result_detection:
-                boxes = r.boxes
-                image_with_boxes = draw_bounding_boxes(image.copy(), boxes, model.names)
-                file_name_detection = f'{time.time()}_{threading.get_native_id()}_detection.png'
-                file_path_detection = os.path.join(settings.MEDIA_ROOT, file_name_detection)
-                cv2.imwrite(file_path_detection, image_with_boxes)
-                for box in boxes:
-                    c = box.cls
-                    condition = model.names[int(c)]
-                    print("Condition (Detection): " + condition)
-
-                    # Mencocokkan nama penyakit dengan tabel Disease
-                    try:
-                        disease = Disease.objects.get(disease_type=condition)
-                        
-                        # Mengambil data dari tabel Recomendation berdasarkan ID yang sesuai
-                        try:
-                            recomendation = Recomendation.objects.get(disease_id=disease)
-                            recomendation_dict = {
-                                'disease_type': disease.disease_type,
-                                'symptoms': recomendation.symptoms,
-                                'recomendation': recomendation.recomendation,
-                                'organic_control': recomendation.organic_control,
-                                'chemical_control_1': recomendation.chemical_control_1,
-                                'chemical_control_2': recomendation.chemical_control_2,
-                                'chemical_control_3': recomendation.chemical_control_3,
-                                'chemical_control_4': recomendation.chemical_control_4,
-                                'chemical_control_5': recomendation.chemical_control_5,
-                                'chemical_control_1_dosage': recomendation.chemical_control_1_dosage,
-                                'chemical_control_2_dosage': recomendation.chemical_control_2_dosage,
-                                'chemical_control_3_dosage': recomendation.chemical_control_3_dosage,
-                                'chemical_control_4_dosage': recomendation.chemical_control_4_dosage,
-                                'chemical_control_5_dosage': recomendation.chemical_control_5_dosage,
-                                'additional_info': recomendation.additional_info,
-                            }
-                            print(recomendation_dict)
-
-                            image_uri = urljoin(f'http://{request.get_host()}', 'media/') + file_name_detection
-                            data_detection = {
-                                'created_at': timezone.now(),
-                                'condition': condition,
-                                'image_uri': image_uri,
-                                'recomendation': recomendation_dict
-                            }
-
-                            send_topic_push(
-                                'Penyakit Terdeteksi',
-                                f'Ada penyakit pada tanaman anda dengan jenis {condition}. Silahkan cek aplikasi untuk informasi lebih lanjut.',
-                                image_uri
-                            )
-
-                            data_disease_detection.append(data_detection)
-                        except Recomendation.DoesNotExist:
-                            pass
-
-                    except Disease.DoesNotExist:
-                        pass
 
             print("predict_segmentation")
             # Melakukan segmentasi
@@ -396,60 +328,38 @@ def plants_segmentation(request):
                         condition=condition_segmentation,
                     )
                     plant_segmentation.save()
-                    
-                    try:
-                        disease_segmentation = Disease.objects.get(disease_type=condition_segmentation)
-                
-                        try:
-                            recomendation_segmentation = Recomendation.objects.get(disease_id=disease_segmentation)
-                            recomendation_dict_segmentation = {
-                                'disease_type': disease_segmentation.disease_type,
-                                'symptoms': recomendation_segmentation.symptoms,
-                                'recomendation': recomendation_segmentation.recomendation,
-                                'organic_control': recomendation_segmentation.organic_control,
-                                'chemical_control_1': recomendation_segmentation.chemical_control_1,
-                                'chemical_control_2': recomendation_segmentation.chemical_control_2,
-                                'chemical_control_3': recomendation_segmentation.chemical_control_3,
-                                'chemical_control_4': recomendation_segmentation.chemical_control_4,
-                                'chemical_control_5': recomendation_segmentation.chemical_control_5,
-                                'chemical_control_1_dosage': recomendation_segmentation.chemical_control_1_dosage,
-                                'chemical_control_2_dosage': recomendation_segmentation.chemical_control_2_dosage,
-                                'chemical_control_3_dosage': recomendation_segmentation.chemical_control_3_dosage,
-                                'chemical_control_4_dosage': recomendation_segmentation.chemical_control_4_dosage,
-                                'chemical_control_5_dosage': recomendation_segmentation.chemical_control_5_dosage,
-                                'additional_info': recomendation_segmentation.additional_info,
-                            }
-                            print(recomendation_dict_segmentation)
 
-                            image_uri_segmentation = urljoin(f'http://{request.get_host()}', 'media/') + file_name_segmentation
-                            data_segmentation = {
-                                'created_at': timezone.now(),
-                                'condition': condition_segmentation,
-                                'image_uri': image_uri_segmentation,
-                                'recomendation': recomendation_dict_segmentation
-                            }
+                    # Simpan data ke dalam model History (gantilah nama dan nilai sesuai dengan kebutuhan)
+                    history_entry = DetectionHistory(
+                        source='segmentation',
+                        plant_img=file_name_segmentation,
+                        plant_name="strawberry",  # Ganti dengan nama tanaman yang sesuai
+                        condition=condition_segmentation,
+                    )
+                    history_entry.save()
 
-                            send_topic_push(
-                                'Region Terdeteksi',
-                                f'Region tanaman anda dengan jenis {condition_segmentation}. Silahkan cek aplikasi untuk informasi lebih lanjut.',
-                                image_uri_segmentation
-                            )
+                    image_uri_segmentation = urljoin(f'http://{request.get_host()}', 'media/') + file_name_segmentation
+                    data_segmentation = {
+                        'created_at': timezone.now(),
+                        'condition': condition_segmentation,
+                        'image_uri': image_uri_segmentation,
+                    }
 
-                            data_disease_segmentation.append(data_segmentation)
-                        except Recomendation.DoesNotExist:
-                            pass
+                    send_topic_push(
+                        'Region Terdeteksi',
+                        f'Region tanaman anda dengan jenis {condition_segmentation}. Silahkan cek aplikasi untuk informasi lebih lanjut.',
+                        image_uri_segmentation
+                    )
 
-                    except Disease.DoesNotExist:
-                        pass
+                    data_disease_segmentation.append(data_segmentation)
 
-            if len(data_disease_detection) > 0 or len(data_disease_segmentation) > 0:
-                message = "Proses deteksi penyakit dan segmentasi berhasil dilakukan"
+            if len(data_disease_segmentation) > 0:
+                message = "Proses segmentasi berhasil dilakukan"
             else:
-                message = "Tidak ada penyakit atau region yang terdeteksi"
+                message = "Tidak ada region yang terdeteksi"
 
             response = {
                 'created_at': timezone.now(),
-                'detection_results': data_disease_detection,
                 'segmentation_results': data_disease_segmentation,
                 'message': message,
             }
@@ -462,6 +372,7 @@ def plants_segmentation(request):
 
     else:
         return JsonResponse({'data': {}, 'status': False, 'message': 'Method not allowed', 'error_data': 'Method not allowed'}, status=405)
+
   
 def detection_history(request):
     # Mengambil semua data DetectionHistory dari database
