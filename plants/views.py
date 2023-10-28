@@ -21,7 +21,7 @@ from django.core import serializers
 
 from rest_framework import viewsets
 from .serializers import PlantSerializer, PlantDetectionSerializer, RecomendationSerializer, DiseaseSerializer, \
-    NotificationSerializer
+    NotificationSerializer, DetectionHistorySerializer
 from rest_framework import status, generics
 from rest_framework.decorators import api_view, action
 from rest_framework.response import Response
@@ -34,10 +34,16 @@ import cv2
 
 from .utils import make_response
 
-print('Loading model...')
+print('Loading object detection model...')
 model = YOLO('best.pt')
+print('Object Detection Model Loaded!')
+
+
+print('Loading semantic segmentation model...')
 segmentation_model = YOLO('segmentation_best.pt')
-print('Model Loaded!')
+print('Semantic Segmentation Model Loaded!')
+
+
 
 
 '''Klasifikasi'''
@@ -124,13 +130,12 @@ def download_media_file(request: WSGIRequest):
 def draw_bounding_boxes(image, boxes, labels):
     for box in boxes:
         if len(box) >= 4:
-            x1, y1, x2, y2 = box[:4]  # Ambil koordinat kotak pembatas
-            label = labels[int(box[4]) if len(box) > 4 else 0]  # Ambil label objek jika tersedia
+            x1, y1, x2, y2 = box[:4]
+            label = labels[int(box[4]) if len(box) > 4 else 0] 
 
-            color = (0, 255, 0)  # Warna hijau
+            color = (0, 255, 0)
             thickness = 2
 
-            # Gambar kotak pembatas pada gambar
             cv2.rectangle(image, (int(x1), int(y1)), (int(x2), int(y2)), color, thickness)
             cv2.putText(image, label, (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, thickness)
 
@@ -164,10 +169,8 @@ def detect_plant_disease(request):
             for r in predict_result:
                 boxes = r.boxes
 
-                # Menggambar bounding box pada gambar asli
                 image_with_boxes = draw_bounding_boxes(image.copy(), boxes, model.names)
 
-                # Simpan gambar yang telah dimodifikasi ke dalam media dan ambil path file
                 file_name = f'{time.time()}_{threading.get_native_id()}.png'
                 file_path = os.path.join(settings.MEDIA_ROOT, file_name)
                 cv2.imwrite(file_path, image_with_boxes)
@@ -180,7 +183,7 @@ def detect_plant_disease(request):
                     plant_detection = PlantDetection(
                         user_id=1, 
                         plant_img=file_name,
-                        plant_name="strawberry",  # Ganti dengan nama tanaman yang sesuai
+                        plant_name="strawberry",  
                         condition=condition,
                     )
                     plant_detection.save()
@@ -194,12 +197,11 @@ def detect_plant_disease(request):
                             plant_name='strawberry',
                             condition=condition
                         )
+                        plant_history.save() 
 
-                    # Mencocokkan nama penyakit dengan tabel Disease
                     try:
                         disease = Disease.objects.get(disease_type=condition)
 
-                        # Mengambil data dari tabel Recomendation berdasarkan ID yang sesuai
                         try:
                             recomendation = Recomendation.objects.get(disease_id=disease)
 
@@ -250,16 +252,12 @@ def detect_plant_disease(request):
                 message = "Penyakit tanaman berhasil dideteksi"
             else:
                 message = "Tidak ada penyakit yang terdeteksi"
-
-            # Mengambil semua data dari tabel Recomendation
-            # all_recomendations = Recomendation.objects.all().values()
-
+                
             # Response yang menggabungkan hasil detection dan hasil dari fungsi detect_plant_disease1
             response = {
                 'created_at': timezone.now(),
                 'leafs_disease': data_disease,
                 'message' : message
-                # 'all_recomendations': list(all_recomendations),
             }
 
             return JsonResponse(response, status=200)
@@ -464,20 +462,22 @@ def plants_segmentation(request):
 
     else:
         return JsonResponse({'data': {}, 'status': False, 'message': 'Method not allowed', 'error_data': 'Method not allowed'}, status=405)
+  
+def detection_history(request):
+    # Mengambil semua data DetectionHistory dari database
+    history_entries = DetectionHistory.objects.all()
 
-def plant_detection_history(request):
-    history = PlantDetection.objects.order_by('-created_at')
-    serialized_history = []
+    # Meng-serialize data menggunakan serializer
+    serializer = DetectionHistorySerializer(history_entries, many=True)
 
-    for entry in history:
-        serialized_history.append({
-            'created_at': entry.created_at,
-            'plant_name': entry.plant_name,
-            'plant_image': entry.plant_img,
-            'condition': entry.condition,
-        })
+    # Menambahkan URL gambar media ke setiap entri
+    data = serializer.data
+    for entry in data:
+        entry['image_url'] = settings.MEDIA_URL + entry['plant_img']
 
-    return JsonResponse({'history': serialized_history})
+    return JsonResponse(data, safe=False)
+
+
 
 
 class DiseaseList(generics.ListCreateAPIView):

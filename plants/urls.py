@@ -1,6 +1,6 @@
 from django.urls import path, include
 from . import views
-from .views import PlantDetectionList, PlantDetectionDetail, RecomendationList, DiseaseList, plant_detection_history, notification, plants_segmentation
+from .views import PlantDetectionList, PlantDetectionDetail, RecomendationList, DiseaseList, notification, plants_segmentation, detection_history
 from django.contrib.auth.decorators import login_required
 from allauth.account.views import LoginView 
 
@@ -18,7 +18,7 @@ urlpatterns = [
 
     path('plants/detect', views.detect_plant_disease, name='plant-detect'),
     path('media/file', views.download_media_file, name='download-media-file'),
-    path('plant-detection/history/', views.plant_detection_history, name='plant_detection_history'),
+    path('plant-detection/history/', views.detection_history, name='plant_detection_history'),
     
     #api recomendation
     path('diseases/', views.DiseaseList.as_view(), name='disease-list'),

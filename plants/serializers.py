@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Plant, PlantDetection,Disease , Recomendation, Notification
+from .models import Plant, PlantDetection, Disease, Recomendation, Notification, DetectionHistory
 
 class PlantSerializer(serializers.ModelSerializer):
     class Meta:
@@ -24,4 +24,9 @@ class RecomendationSerializer(serializers.ModelSerializer):
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
+        fields = '__all__'
+        
+class DetectionHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DetectionHistory
         fields = '__all__'
