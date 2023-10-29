@@ -26,10 +26,9 @@ class RegisterView(generics.CreateAPIView):
             refresh = RefreshToken.for_user(user)
             access_token = str(refresh.access_token)
 
-            return Response({'message': 'User registered successfully', 'access_token': access_token},
-                            status=status.HTTP_201_CREATED)
+            return make_response({}, 'Register berhasil', status_code=status.HTTP_201_CREATED)
 
-        return make_response(None, 'Register gagal', status_code=status.HTTP_400_BAD_REQUEST,
+        return make_response({}, 'Register gagal', status_code=status.HTTP_400_BAD_REQUEST,
                              error_data=serializer.errors)
 
 
