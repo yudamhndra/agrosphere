@@ -44,8 +44,6 @@ segmentation_model = YOLO('segmentation_best.pt')
 print('Semantic Segmentation Model Loaded!')
 
 
-
-
 '''Klasifikasi'''
 
 
@@ -81,8 +79,8 @@ def create_plant(request):
         }
 
         serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return make_response(data=serializer.data, status_code=200)
+    return make_response(data=serializer.errors, status_code=400, message="error")
 
 
 @api_view(['PUT'])
@@ -91,20 +89,18 @@ def update_plant(request, plant_id):
     serializer = PlantSerializer(plant, data=request.data)
     if serializer.is_valid():
         serializer.save()
-        return Response(serializer.data)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return make_response(data=serializer.data, status_code=200)
+    return make_response(data=serializer.errors, status_code=400)
 
 
 @api_view(['DELETE'])
 def delete_plant(request, plant_id):
     plant = get_object_or_404(Plant, id=plant_id)
     plant.delete()
-    return Response(status=status.HTTP_204_NO_CONTENT)
+    return make_response(message="Deleted", status_code=200)
 
 
 '''deteksi'''
-
-
 class PlantDetectionList(generics.ListCreateAPIView):
     queryset = PlantDetection.objects.all()
     serializer_class = PlantDetectionSerializer
@@ -123,8 +119,8 @@ def download_media_file(request: WSGIRequest):
             response = FileResponse(open(file_path, 'rb'), content_type=content_type)
             response['Content-Disposition'] = f'attachment; filename="{os.path.basename(file_path)}'
             return response
-        return HttpResponseNotFound(f'No file named {file_path}')
-    return HttpResponseNotAllowed('Invalid method')
+        return make_response(message=f'No file named {file_path}', status_code=400)
+    return make_response(message='Invalid method', status_code=400)
 
 
 def draw_bounding_boxes(image, boxes, labels):
@@ -154,9 +150,9 @@ def detect_plant_disease(request):
                     if image_data:
                         image = np.asarray(cv2.imdecode(np.frombuffer(base64.b64decode(image_data), np.uint8), -1))
                     else:
-                        return JsonResponse({'data': {}, 'status': False, 'message': 'No image data provided in request', 'error_data': 'No image data provided in request.'}, status=400)
+                        return make_response(status_code=400, message='No image data provided in request')
                 except json.JSONDecodeError:
-                    return JsonResponse({'data': {}, 'status': False, 'message': 'Invalid JSON data in request body', 'error_data': 'Invalid JSON data in request body.'}, status=400)
+                    return make_response(status_code=400, message='Invalid JSON data in request body')
 
             print("predict")
 
@@ -259,15 +255,13 @@ def detect_plant_disease(request):
                 'leafs_disease': data_disease,
                 'message' : message
             }
-
-            return JsonResponse(response, status=200)
+            return make_response(data=response, status_code=200, message='ok')
 
         except Exception as e:
             print(e.__class__)
-            return JsonResponse({'data': {}, 'status': False, 'message': 'Error Exception', 'error_data': str(e)}, status=500)
-
+            return make_response(status_code=400, message=str(e))
     else:
-        return JsonResponse({'data': {}, 'status': False, 'message': 'Method not allowed', 'error_data': 'Method not allowed'}, status=405)
+        return make_response(status_code=405, message='Method not allowed')
     
 def apply_segmentation_mask(original_image, mask):
     # Ambil array mask dari objek Masks dalam format normalized segments
@@ -301,9 +295,9 @@ def plants_segmentation(request):
                     if image_data:
                         image = np.asarray(cv2.imdecode(np.frombuffer(base64.b64decode(image_data), np.uint8), -1))
                     else:
-                        return JsonResponse({'data': {}, 'status': False, 'message': 'No image data provided in request', 'error_data': 'No image data provided in request.'}, status=400)
+                        return make_response(status_code=400, message='No image data provided in request')
                 except json.JSONDecodeError:
-                    return JsonResponse({'data': {}, 'status': False, 'message': 'Invalid JSON data in request body', 'error_data': 'Invalid JSON data in request body.'}, status=400)
+                    return make_response(status_code=400, message='Invalid JSON data in request body')
 
             print("predict_segmentation")
             # Melakukan segmentasi
@@ -364,14 +358,14 @@ def plants_segmentation(request):
                 'message': message,
             }
 
-            return JsonResponse(response, status=200)
+            return make_response(data=response, status_code=200)
 
         except Exception as e:
             print(e.__class__)
-            return JsonResponse({'data': {}, 'status': False, 'message': 'Error Exception', 'error_data': str(e)}, status=500)
+            return make_response(status_code=500, message='Unexpected error occured: '+str(e))
 
     else:
-        return JsonResponse({'data': {}, 'status': False, 'message': 'Method not allowed', 'error_data': 'Method not allowed'}, status=405)
+        return make_response(status_code=405, message='Invalid method')
 
   
 def detection_history(request):
@@ -386,7 +380,7 @@ def detection_history(request):
     for entry in data:
         entry['image_url'] = settings.MEDIA_URL + entry['plant_img']
 
-    return JsonResponse(data, safe=False)
+    return make_response(data=data, status_code=200)
 
 
 
