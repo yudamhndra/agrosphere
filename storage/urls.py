@@ -23,7 +23,8 @@ from django.conf import settings
 urlpatterns = [
     path('', LoginView.as_view(), name='login'),
     path('admin/', admin.site.urls),
-    path('api/v1/', include('plants.urls')),  # Tutup tanda kurung di sini
+    path('api/v1/', include('plants.urls_api')), 
+    path('', include('plants.urls_page')), 
 
     # auth api
     path('api/v1/register/', RegisterView.as_view(), name='register'),

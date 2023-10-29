@@ -14,6 +14,7 @@ from django.conf import settings
 from django.db.models import F
 from django.urls import reverse as url_reverse
 from django.utils import timezone
+from django.shortcuts import render
 
 from firebase.auth_firebase import send_topic_push
 from .models import Plant, PlantDetection, Recomendation, Disease, Recomendation, Notification, Plant, DetectionHistory
@@ -434,3 +435,18 @@ def notificationHistory(request):
             serializer.save()
             return make_response(response_data, "Notification History", 200)
         return make_response(None, "Notification History", 400, serializer.errors)
+
+def dashboard(request: WSGIRequest):
+    month_count = dict()
+    groupped_detections = [[]]
+    for detection in DetectionHistory.objects.all():
+        if len(groupped_detections[-1])==4:
+            groupped_detections.append([])
+        groupped_detections[-1].append({'plant_img': urljoin(f'http://{request.get_host()}', 'media/') + detection.plant_img, 'condition': detection.condition})
+        month_detected = detection.updated_at.date().month
+        if not (month_detected in month_count):
+            month_count[month_detected] = 1
+        else:
+            month_count[month_detected] += 1
+
+    return render(request, 'dashboard.html', {'line_data': list(month_count.values()), 'penyakit_list': groupped_detections})
