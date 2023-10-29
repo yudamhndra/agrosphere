@@ -260,7 +260,7 @@ def detect_plant_disease(request):
                 'message' : message
             }
 
-            return JsonResponse(response, status=200)
+            return make_response(response, message, 200)
 
         except Exception as e:
             print(e.__class__)
