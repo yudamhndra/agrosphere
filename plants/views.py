@@ -38,13 +38,9 @@ print('Loading object detection model...')
 model = YOLO('best.pt')
 print('Object Detection Model Loaded!')
 
-
 print('Loading semantic segmentation model...')
 segmentation_model = YOLO('segmentation_best.pt')
 print('Semantic Segmentation Model Loaded!')
-
-
-
 
 '''Klasifikasi'''
 
@@ -81,8 +77,8 @@ def create_plant(request):
         }
 
         serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return make_response(data=serializer.data, status_code=200)
+    return make_response(data=serializer.errors, status_code=400, message="error")
 
 
 @api_view(['PUT'])
@@ -91,15 +87,15 @@ def update_plant(request, plant_id):
     serializer = PlantSerializer(plant, data=request.data)
     if serializer.is_valid():
         serializer.save()
-        return Response(serializer.data)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return make_response(data=serializer.data, status_code=200)
+    return make_response(data=serializer.errors, status_code=400)
 
 
 @api_view(['DELETE'])
 def delete_plant(request, plant_id):
     plant = get_object_or_404(Plant, id=plant_id)
     plant.delete()
-    return Response(status=status.HTTP_204_NO_CONTENT)
+    return make_response(message="Deleted", status_code=200)
 
 
 '''deteksi'''
@@ -123,15 +119,15 @@ def download_media_file(request: WSGIRequest):
             response = FileResponse(open(file_path, 'rb'), content_type=content_type)
             response['Content-Disposition'] = f'attachment; filename="{os.path.basename(file_path)}'
             return response
-        return HttpResponseNotFound(f'No file named {file_path}')
-    return HttpResponseNotAllowed('Invalid method')
+        return make_response(message=f'No file named {file_path}', status_code=400)
+    return make_response(message='Invalid method', status_code=400)
 
 
 def draw_bounding_boxes(image, boxes, labels):
     for box in boxes:
         if len(box) >= 4:
             x1, y1, x2, y2 = box[:4]
-            label = labels[int(box[4]) if len(box) > 4 else 0] 
+            label = labels[int(box[4]) if len(box) > 4 else 0]
 
             color = (0, 255, 0)
             thickness = 2
@@ -140,6 +136,7 @@ def draw_bounding_boxes(image, boxes, labels):
             cv2.putText(image, label, (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, thickness)
 
     return image
+
 
 def detect_plant_disease(request):
     if request.method == 'POST':
@@ -154,9 +151,9 @@ def detect_plant_disease(request):
                     if image_data:
                         image = np.asarray(cv2.imdecode(np.frombuffer(base64.b64decode(image_data), np.uint8), -1))
                     else:
-                        return JsonResponse({'data': {}, 'status': False, 'message': 'No image data provided in request', 'error_data': 'No image data provided in request.'}, status=400)
+                        return make_response(status_code=400, message='No image data provided in request')
                 except json.JSONDecodeError:
-                    return JsonResponse({'data': {}, 'status': False, 'message': 'Invalid JSON data in request body', 'error_data': 'Invalid JSON data in request body.'}, status=400)
+                    return make_response(status_code=400, message='Invalid JSON data in request body')
 
             print("predict")
 
@@ -179,15 +176,15 @@ def detect_plant_disease(request):
                     c = box.cls
                     condition = model.names[int(c)]
                     print("Condition " + condition)
-                    
+
                     plant_detection = PlantDetection(
-                        user_id=1, 
+                        user_id=1,
                         plant_img=file_name,
-                        plant_name="strawberry",  
+                        plant_name="strawberry",
                         condition=condition,
                     )
                     plant_detection.save()
-                    
+
                     existing_history = DetectionHistory.objects.filter(plant_img=file_name).first()
 
                     if not existing_history:
@@ -197,7 +194,7 @@ def detect_plant_disease(request):
                             plant_name='strawberry',
                             condition=condition
                         )
-                        plant_history.save() 
+                        plant_history.save()
 
                     try:
                         disease = Disease.objects.get(disease_type=condition)
@@ -252,23 +249,22 @@ def detect_plant_disease(request):
                 message = "Penyakit tanaman berhasil dideteksi"
             else:
                 message = "Tidak ada penyakit yang terdeteksi"
-                
+
             # Response yang menggabungkan hasil detection dan hasil dari fungsi detect_plant_disease1
             response = {
                 'created_at': timezone.now(),
                 'leafs_disease': data_disease,
-                'message' : message
+                'message': message
             }
-
-            return make_response(response, message, 200)
+            return make_response(data=response, status_code=200, message='ok')
 
         except Exception as e:
             print(e.__class__)
-            return JsonResponse({'data': {}, 'status': False, 'message': 'Error Exception', 'error_data': str(e)}, status=500)
-
+            return make_response(status_code=400, message=str(e))
     else:
-        return JsonResponse({'data': {}, 'status': False, 'message': 'Method not allowed', 'error_data': 'Method not allowed'}, status=405)
-    
+        return make_response(status_code=405, message='Method not allowed')
+
+
 def apply_segmentation_mask(original_image, mask):
     # Ambil array mask dari objek Masks dalam format normalized segments
     mask_array = mask.xyn
@@ -284,6 +280,7 @@ def apply_segmentation_mask(original_image, mask):
             cv2.fillPoly(masked_image, [points], (0, 255, 0))  # Warna hijau untuk mask
 
     return masked_image
+
 
 def plants_segmentation(request):
     if request.method == 'POST':
@@ -301,9 +298,9 @@ def plants_segmentation(request):
                     if image_data:
                         image = np.asarray(cv2.imdecode(np.frombuffer(base64.b64decode(image_data), np.uint8), -1))
                     else:
-                        return JsonResponse({'data': {}, 'status': False, 'message': 'No image data provided in request', 'error_data': 'No image data provided in request.'}, status=400)
+                        return make_response(status_code=400, message='No image data provided in request')
                 except json.JSONDecodeError:
-                    return JsonResponse({'data': {}, 'status': False, 'message': 'Invalid JSON data in request body', 'error_data': 'Invalid JSON data in request body.'}, status=400)
+                    return make_response(status_code=400, message='Invalid JSON data in request body')
 
             print("predict_segmentation")
             # Melakukan segmentasi
@@ -322,7 +319,7 @@ def plants_segmentation(request):
 
                     # Simpan data ke dalam model Plant (gantilah nama dan nilai sesuai dengan kebutuhan)
                     plant_segmentation = Plant(
-                        user_id=1, 
+                        user_id=1,
                         plant_img=file_name_segmentation,
                         plant_name="strawberry",  # Ganti dengan nama tanaman yang sesuai
                         condition=condition_segmentation,
@@ -364,16 +361,16 @@ def plants_segmentation(request):
                 'message': message,
             }
 
-            return JsonResponse(response, status=200)
+            return make_response(data=response, status_code=200)
 
         except Exception as e:
             print(e.__class__)
-            return JsonResponse({'data': {}, 'status': False, 'message': 'Error Exception', 'error_data': str(e)}, status=500)
+            return make_response(status_code=500, message='Unexpected error occured: ' + str(e))
 
     else:
-        return JsonResponse({'data': {}, 'status': False, 'message': 'Method not allowed', 'error_data': 'Method not allowed'}, status=405)
+        return make_response(status_code=405, message='Invalid method')
 
-  
+
 def detection_history(request):
     # Mengambil semua data DetectionHistory dari database
     history_entries = DetectionHistory.objects.all()
@@ -386,9 +383,7 @@ def detection_history(request):
     for entry in data:
         entry['image_url'] = settings.MEDIA_URL + entry['plant_img']
 
-    return JsonResponse(data, safe=False)
-
-
+    return make_response(data=data, status_code=200)
 
 
 class DiseaseList(generics.ListCreateAPIView):
