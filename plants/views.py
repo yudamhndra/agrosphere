@@ -437,7 +437,7 @@ def notificationHistory(request):
         return make_response(None, "Notification History", 400, serializer.errors)
 
 def dashboard(request: WSGIRequest):
-    month_count = dict()
+    month_count = {num:0 for num in range(1, 13)}
     groupped_detections = [[]]
     for detection in DetectionHistory.objects.all():
         if len(groupped_detections[-1])==4:
