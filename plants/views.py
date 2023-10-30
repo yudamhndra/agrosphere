@@ -263,29 +263,10 @@ def detect_plant_disease(request):
             return make_response(status_code=400, message=str(e))
     else:
         return make_response(status_code=405, message='Method not allowed')
-    
-def apply_segmentation_mask(original_image, mask):
-    # Ambil array mask dari objek Masks dalam format normalized segments
-    mask_array = mask.xyn
-
-    # Buat salinan gambar asli untuk menggambarkan mask segmentasi
-    masked_image = original_image.copy()
-
-    # Gambar mask segmentasi ke gambar asli
-    for segment in mask_array:
-        segment = np.array(segment)
-        if len(segment) >= 3:  # Pastikan setiap segment memiliki setidaknya tiga titik
-            points = segment.reshape((-1, 2)).astype(np.int32)
-            cv2.fillPoly(masked_image, [points], (0, 255, 0))  # Warna hijau untuk mask
-
-    return masked_image
 
 def plants_segmentation(request):
     if request.method == 'POST':
         try:
-            data_disease_segmentation = []  # Inisialisasi data_disease_segmentation untuk segmentasi
-            file_name_segmentation = ""
-
             if 'image' in request.FILES:
                 uploaded_image = request.FILES['image'].read()
                 image = np.asarray(cv2.imdecode(np.frombuffer(uploaded_image, np.uint8), -1))
@@ -300,73 +281,113 @@ def plants_segmentation(request):
                 except json.JSONDecodeError:
                     return make_response(status_code=400, message='Invalid JSON data in request body')
 
-            print("predict_segmentation")
-            # Melakukan segmentasi
-            predict_result_segmentation = segmentation_model.predict(image)
+            print("predict")
 
-            for r in predict_result_segmentation:
-                masks = r.masks
+            predict_result = segmentation_model.predict(image)
+            data_disease = []
+            file_name = ""
+            condition = ""
 
-                for mask in masks:
-                    # Apply the masks to the original image to obtain segmented regions
-                    segmented_image = apply_segmentation_mask(image, mask)
-                    file_name_segmentation = f'{time.time()}_{threading.get_native_id()}_segmentation.png'
-                    file_path_segmentation = os.path.join(settings.MEDIA_ROOT, file_name_segmentation)
-                    cv2.imwrite(file_path_segmentation, segmented_image)
-                    condition_segmentation = "segmented_region"
+            for r in predict_result:
+                boxes = r.boxes
 
-                    # Simpan data ke dalam model Plant (gantilah nama dan nilai sesuai dengan kebutuhan)
-                    plant_segmentation = Plant(
+                image_with_boxes = draw_bounding_boxes(image.copy(), boxes, segmentation_model.names)
+
+                file_name = f'{time.time()}_{threading.get_native_id()}.png'
+                file_path = os.path.join(settings.MEDIA_ROOT, file_name)
+                cv2.imwrite(file_path, image_with_boxes)
+
+                for box in boxes:
+                    c = box.cls
+                    condition = segmentation_model.names[int(c)]
+                    print("Condition " + condition)
+                    
+                    plant_detection = Plant(
                         user_id=1, 
-                        plant_img=file_name_segmentation,
-                        plant_name="strawberry",  # Ganti dengan nama tanaman yang sesuai
-                        condition=condition_segmentation,
+                        plant_img=file_name,
+                        plant_name="strawberry",  
+                        condition=condition,
                     )
-                    plant_segmentation.save()
+                    plant_detection.save()
+                    
+                    existing_history = DetectionHistory.objects.filter(plant_img=file_name).first()
 
-                    # Simpan data ke dalam model History (gantilah nama dan nilai sesuai dengan kebutuhan)
-                    history_entry = DetectionHistory(
-                        source='segmentation',
-                        plant_img=file_name_segmentation,
-                        plant_name="strawberry",  # Ganti dengan nama tanaman yang sesuai
-                        condition=condition_segmentation,
-                    )
-                    history_entry.save()
+                    if not existing_history:
+                        plant_history = DetectionHistory(
+                            source='segmentation',
+                            plant_img=file_name,
+                            plant_name='strawberry',
+                            condition=condition
+                        )
+                        plant_history.save() 
 
-                    image_uri_segmentation = urljoin(f'http://{request.get_host()}', 'media/') + file_name_segmentation
-                    data_segmentation = {
-                        'created_at': timezone.now(),
-                        'condition': condition_segmentation,
-                        'image_uri': image_uri_segmentation,
-                    }
+                    try:
+                        disease = Disease.objects.get(disease_type=condition)
 
-                    send_topic_push(
-                        'Region Terdeteksi',
-                        f'Region tanaman anda dengan jenis {condition_segmentation}. Silahkan cek aplikasi untuk informasi lebih lanjut.',
-                        image_uri_segmentation
-                    )
+                        try:
+                            recomendation = Recomendation.objects.get(disease_id=disease)
 
-                    data_disease_segmentation.append(data_segmentation)
+                            # Create a dictionary representing the Recomendation object
+                            recomendation_dict = {
+                                'disease_type': disease.disease_type,
+                                'symptoms': recomendation.symptoms,
+                                'recomendation': recomendation.recomendation,
+                                'organic_control': recomendation.organic_control,
+                                'chemical_control_1': recomendation.chemical_control_1,
+                                'chemical_control_2': recomendation.chemical_control_2,
+                                'chemical_control_3': recomendation.chemical_control_3,
+                                'chemical_control_4': recomendation.chemical_control_4,
+                                'chemical_control_5': recomendation.chemical_control_5,
+                                'chemical_control_1_dosage': recomendation.chemical_control_1_dosage,
+                                'chemical_control_2_dosage': recomendation.chemical_control_2_dosage,
+                                'chemical_control_3_dosage': recomendation.chemical_control_3_dosage,
+                                'chemical_control_4_dosage': recomendation.chemical_control_4_dosage,
+                                'chemical_control_5_dosage': recomendation.chemical_control_5_dosage,
+                                'additional_info': recomendation.additional_info,
+                            }
 
-            if len(data_disease_segmentation) > 0:
-                message = "Proses segmentasi berhasil dilakukan"
+                            print(recomendation_dict)
+
+                            image_uri = urljoin(f'http://{request.get_host()}', 'media/') + file_name
+
+                            data = {
+                                'created_at': timezone.now(),
+                                'condition': condition,
+                                'image_uri': image_uri,
+                                'recomendation': recomendation_dict
+                            }
+
+                            send_topic_push(
+                                'Penyakit Terdeteksi',
+                                f'Ada penyakit pada tanaman anda dengan jenis {condition}. Silahkan cek aplikasi untuk informasi lebih lanjut.',
+                                image_uri
+                            )
+
+                            data_disease.append(data)
+                        except Recomendation.DoesNotExist:
+                            pass
+
+                    except Disease.DoesNotExist:
+                        pass
+
+            if len(data_disease) > 0:
+                message = "Penyakit tanaman berhasil dideteksi"
             else:
-                message = "Tidak ada region yang terdeteksi"
-
+                message = "Tidak ada penyakit yang terdeteksi"
+                
+            # Response yang menggabungkan hasil detection dan hasil dari fungsi detect_plant_disease1
             response = {
                 'created_at': timezone.now(),
-                'segmentation_results': data_disease_segmentation,
-                'message': message,
+                'leafs_disease': data_disease,
+                'message' : message
             }
-
-            return make_response(data=response, status_code=200)
+            return make_response(data=response, status_code=200, message='ok')
 
         except Exception as e:
             print(e.__class__)
-            return make_response(status_code=500, message='Unexpected error occured: '+str(e))
-
+            return make_response(status_code=400, message=str(e))
     else:
-        return make_response(status_code=405, message='Invalid method')
+        return make_response(status_code=405, message='Method not allowed')
 
   
 def detection_history(request):
