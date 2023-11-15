@@ -4,7 +4,6 @@ from .views import dashboard
 
 
 urlpatterns = [
-    # api klasifikasi
     path('dashboard/', (views.dashboard), name='dashboard'),
     
 ] 

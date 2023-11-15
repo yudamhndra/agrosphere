@@ -15,6 +15,7 @@ from django.db.models import F
 from django.urls import reverse as url_reverse
 from django.utils import timezone
 from django.shortcuts import render
+from django.forms.models import model_to_dict
 
 from firebase.auth_firebase import send_topic_push
 from .models import Plant, PlantDetection, Recomendation, Disease, Recomendation, Notification, Plant, DetectionHistory
@@ -391,11 +392,19 @@ def plants_segmentation(request):
 
   
 def detection_history(request):
-    history_entries = DetectionHistory.objects.all()
+    json_body = json.loads(request.body)
+    last_start = json_body['last_start']
+    last_end = json_body['last_end']
+    if last_end==-1:
+        history_entries = DetectionHistory.objects.all().order_by('-created_at')[last_start:]
+    else:
+        history_entries = DetectionHistory.objects.all().order_by('-created_at')[last_start:last_end]
+        
     serializer = DetectionHistorySerializer(history_entries, many=True)
     data = serializer.data
     for entry in data:
         entry['image_url'] = settings.MEDIA_URL + entry['plant_img']
+        entry['recommendation'] = model_to_dict(Recomendation.objects.get(pk=entry['recommendation']))
 
     return make_response(data=data, status_code=200)
 

@@ -59,7 +59,7 @@ class Recomendation(models.Model):
     
 class DetectionHistory(models.Model):
     id = models.AutoField(primary_key=True)
-    recomendation = models.ForeignKey(Recomendation, on_delete= models.CASCADE)
+    recommendation = models.ForeignKey(Recomendation, on_delete= models.CASCADE)
     source = models.CharField(max_length=255)
     plant_img = models.CharField(max_length=255)
     plant_name = models.CharField(max_length=255)
