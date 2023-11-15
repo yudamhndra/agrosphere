@@ -391,21 +391,13 @@ def plants_segmentation(request):
 
   
 def detection_history(request):
-    # Mengambil semua data DetectionHistory dari database
     history_entries = DetectionHistory.objects.all()
-
-    # Meng-serialize data menggunakan serializer
     serializer = DetectionHistorySerializer(history_entries, many=True)
-
-    # Menambahkan URL gambar media ke setiap entri
     data = serializer.data
     for entry in data:
         entry['image_url'] = settings.MEDIA_URL + entry['plant_img']
 
     return make_response(data=data, status_code=200)
-
-
-
 
 class DiseaseList(generics.ListCreateAPIView):
     queryset = Disease.objects.all()

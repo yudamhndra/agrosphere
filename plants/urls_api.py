@@ -25,7 +25,7 @@ urlpatterns = [
     path('recomendations/', views.RecomendationList.as_view(), name='recomendation-list'),
     
     #apisegmentation
-    path('plants/segmentation', views.plants_segmentation, name='plant-detect'),
+    path('plants/segmentation', views.plants_segmentation, name='plant-segmentation'),
     path('plant-segmentation/history/', views.plants_segmentation, name='plant_segmentation_history'),
 
     #notif
