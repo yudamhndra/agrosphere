@@ -403,7 +403,7 @@ def detection_history(request):
     serializer = DetectionHistorySerializer(history_entries, many=True)
     data = serializer.data
     for entry in data:
-        entry['image_url'] = settings.MEDIA_URL + entry['plant_img']
+        entry['image_url'] = urljoin(f'http://{request.get_host()}', 'media/') + entry['plant_img']
         entry['recommendation'] = model_to_dict(Recomendation.objects.get(pk=entry['recommendation']))
 
     return make_response(data=data, status_code=200)
