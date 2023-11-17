@@ -188,60 +188,62 @@ def detect_plant_disease(request):
                     
                     existing_history = DetectionHistory.objects.filter(plant_img=file_name).first()
 
-                    if not existing_history:
-                        plant_history = DetectionHistory(
-                            source='detection',
-                            plant_img=file_name,
-                            plant_name='strawberry',
-                            condition=condition
-                        )
-                        plant_history.save() 
+
 
                     try:
                         disease = Disease.objects.get(disease_type=condition)
+                        recomendation = Recomendation.objects.get(disease_id=disease)
 
-                        try:
-                            recomendation = Recomendation.objects.get(disease_id=disease)
+                        # Create a dictionary representing the Recomendation object
+                        recomendation_dict = {
+                            'disease_type': disease.disease_type,
+                            'symptoms': recomendation.symptoms,
+                            'recomendation': recomendation.recomendation,
+                            'organic_control': recomendation.organic_control,
+                            'chemical_control_1': recomendation.chemical_control_1,
+                            'chemical_control_2': recomendation.chemical_control_2,
+                            'chemical_control_3': recomendation.chemical_control_3,
+                            'chemical_control_4': recomendation.chemical_control_4,
+                            'chemical_control_5': recomendation.chemical_control_5,
+                            'chemical_control_1_dosage': recomendation.chemical_control_1_dosage,
+                            'chemical_control_2_dosage': recomendation.chemical_control_2_dosage,
+                            'chemical_control_3_dosage': recomendation.chemical_control_3_dosage,
+                            'chemical_control_4_dosage': recomendation.chemical_control_4_dosage,
+                            'chemical_control_5_dosage': recomendation.chemical_control_5_dosage,
+                            'additional_info': recomendation.additional_info,
+                        }
 
-                            # Create a dictionary representing the Recomendation object
-                            recomendation_dict = {
-                                'disease_type': disease.disease_type,
-                                'symptoms': recomendation.symptoms,
-                                'recomendation': recomendation.recomendation,
-                                'organic_control': recomendation.organic_control,
-                                'chemical_control_1': recomendation.chemical_control_1,
-                                'chemical_control_2': recomendation.chemical_control_2,
-                                'chemical_control_3': recomendation.chemical_control_3,
-                                'chemical_control_4': recomendation.chemical_control_4,
-                                'chemical_control_5': recomendation.chemical_control_5,
-                                'chemical_control_1_dosage': recomendation.chemical_control_1_dosage,
-                                'chemical_control_2_dosage': recomendation.chemical_control_2_dosage,
-                                'chemical_control_3_dosage': recomendation.chemical_control_3_dosage,
-                                'chemical_control_4_dosage': recomendation.chemical_control_4_dosage,
-                                'chemical_control_5_dosage': recomendation.chemical_control_5_dosage,
-                                'additional_info': recomendation.additional_info,
-                            }
+                        print(recomendation_dict)
 
-                            print(recomendation_dict)
+                        image_uri = urljoin(f'http://{request.get_host()}', 'media/') + file_name
 
-                            image_uri = urljoin(f'http://{request.get_host()}', 'media/') + file_name
+                        data = {
+                            'created_at': timezone.now(),
+                            'condition': condition,
+                            'image_uri': image_uri,
+                            'recomendation': recomendation_dict
+                        }
 
-                            data = {
-                                'created_at': timezone.now(),
-                                'condition': condition,
-                                'image_uri': image_uri,
-                                'recomendation': recomendation_dict
-                            }
+                        send_topic_push(
+                            'Penyakit Terdeteksi',
+                            f'Ada penyakit pada tanaman anda dengan jenis {condition}. Silahkan cek aplikasi untuk informasi lebih lanjut.',
+                            image_uri
+                        )
 
-                            send_topic_push(
-                                'Penyakit Terdeteksi',
-                                f'Ada penyakit pada tanaman anda dengan jenis {condition}. Silahkan cek aplikasi untuk informasi lebih lanjut.',
-                                image_uri
+                        data_disease.append(data)
+
+                        if not existing_history:
+                            plant_history = DetectionHistory(
+                                source='detection',
+                                plant_img=file_name,
+                                plant_name='strawberry',
+                                condition=condition,
+                                recommendation=recommendation
                             )
-
-                            data_disease.append(data)
-                        except Recomendation.DoesNotExist:
-                            pass
+                            plant_history.save() 
+                            
+                    except Recomendation.DoesNotExist:
+                        pass
 
                     except Disease.DoesNotExist:
                         pass
@@ -259,7 +261,7 @@ def detect_plant_disease(request):
             }
             return make_response(data=response, status_code=200, message='ok')
 
-        except Exception as e:
+        except KeyboardInterrupt as e:
             print(e.__class__)
             return make_response(status_code=400, message=str(e))
     else:
@@ -472,3 +474,6 @@ def dashboard(request: WSGIRequest):
             month_count[month_detected] += 1
 
     return render(request, 'dashboard.html', {'line_data': list(month_count.values()), 'penyakit_list': groupped_detections})
+
+def splash(request: WSGIRequest):
+    return render(request, 'splash.html')
