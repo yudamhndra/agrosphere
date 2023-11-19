@@ -6,19 +6,20 @@ import time
 import threading
 import os
 import mimetypes
-from urllib.parse import urljoin
+import hashlib
 
+from urllib.parse import urljoin
 from django.core.handlers.wsgi import WSGIRequest
-from django.http.response import JsonResponse, FileResponse, HttpResponseNotFound, HttpResponseNotAllowed
+from django.http.response import JsonResponse, FileResponse, HttpResponseNotFound, HttpResponseNotAllowed, HttpResponseBadRequest
 from django.conf import settings
 from django.db.models import F
 from django.urls import reverse as url_reverse
 from django.utils import timezone
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.forms.models import model_to_dict
 
 from firebase.auth_firebase import send_topic_push
-from .models import Plant, PlantDetection, Recomendation, Disease, Recomendation, Notification, Plant, DetectionHistory
+from .models import *
 from django.core import serializers
 
 from rest_framework import viewsets
@@ -461,6 +462,59 @@ def notificationHistory(request):
             return make_response(response_data, "Notification History", 200)
         return make_response(None, "Notification History", 400, serializer.errors)
 
+
+def login_core(username, password):
+    valid_login = False
+    user = CustomUser.objects.filter(username=username)
+    if len(user)>0:
+        user = user[0]
+        hash_obj = hashlib.sha256()
+        hash_obj.update(password.encode('utf-8'))
+        if user.password==hash_obj.hexdigest():
+            web_session = CustomSession(user=user)
+            web_session.save()
+            return True, web_session
+    return False, None
+
+def web_login_wrap(view):
+    def wrapper(*args, **kwargs):
+        request = args[0]
+        session_id = request.session['session_id']
+        web_session = CustomSession.objects.filter(session_id=session_id)
+        if len(web_session)>0:
+            return view(*args, **kwargs)
+        return redirect('login_web')
+    return wrapper
+
+def login(request: WSGIRequest):
+    if request.method=='GET':
+        return render(request, 'login.html')
+    elif request.method=='POST':
+        valid_login, web_session = login_core(request.POST['username'], request.POST['password'])
+        if valid_login:
+            request.session['session_id'] = web_session.session_id
+            return redirect('dashboard')
+        else:
+            return render(request, 'login.html', {'error_message': 'Login Salah'})
+
+def register(request: WSGIRequest):
+    if request.method == 'GET':
+        return render(request, 'register.html')
+    elif request.method == 'POST':
+        if request.POST['password']!=request.POST['password-confirm']:
+            return render(request, 'register.html', {'error_message': 'Password tidak sesuai dengan konfirmasi'})
+        old_users = CustomUser.objects.filter(username=request.POST['username'])
+        if len(old_users)>0:
+            return render(request, 'register.html', {'error_message': 'Username sudah terdaftar!'})   
+        hash_obj = hashlib.sha256()
+        hash_obj.update(request.POST['password'].encode('utf-8'))         
+        new_user = CustomUser(username=request.POST['username'], name=request.POST['name'], password=hash_obj.hexdigest())
+        new_user.save()
+        return login(request)
+    else:
+        return HttpResponseBadRequest('Method not allowed')
+
+@web_login_wrap
 def dashboard(request: WSGIRequest):
     month_count = {num:0 for num in range(1, 13)}
     groupped_detections = [[]]
@@ -478,3 +532,8 @@ def dashboard(request: WSGIRequest):
 
 def splash(request: WSGIRequest):
     return render(request, 'splash.html')
+
+def web_logout(request: WSGIRequest):
+    session = CustomSession.objects.get(session_id=request.session['session_id'])
+    session.delete()
+    return redirect('splash')

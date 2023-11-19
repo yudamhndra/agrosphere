@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+import base64
+
 
 # segmentation
 class Plant(models.Model):
@@ -79,4 +81,19 @@ class Notification(models.Model):
     
     def __str__(self):
         return self.title
+
+class CustomUser(models.Model):
+    name = models.CharField(max_length=255)
+    username = models.CharField(max_length=255, unique=True)
+    password = models.CharField(max_length=510)
     
+class CustomSession(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    valid_until = models.DateTimeField(blank=True, null=True)
+    infinite_session = models.BooleanField(default=True)
+    session_id = models.CharField(max_length=1000, blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        self.session_id = base64.b64encode(self.user.username.encode('utf-8')+self.user.password.encode('utf-8')).decode('utf-8')
+        super().save(*args, **kwargs)

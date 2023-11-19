@@ -1,0 +1,147 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>Agrosphere - Welcome!</title>
+    <link rel="icon" href="{% static 'img/favicon.png' %}" sizes="32x32" type="image/png" />
+
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}" />
+
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}" />
+
+    <link rel="stylesheet" href="{% static 'font-awesome-4.7.0/css/font-awesome.min.css' %}" />
+
+    <link rel="stylesheet" href="{% static 'css/aos.css' %}" />
+
+    <style>
+      .video-banner {
+        position: relative;
+        width: 100%;
+        height: 640px; 
+        overflow: hidden;
+      }
+      
+      .video-element {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      
+      .video-content {
+        position: absolute;
+        top: 40%;
+        left: 40%;
+        transform: translate(-50%, -50%);
+        color: white;
+        z-index: 1;
+      }
+      .video-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7); 
+      }      
+    </style>
+  </head>
+
+  <body>
+    
+    <div class="jumbotron jumbotron-fluid" id="banner" style="background-image: url({% static 'img/banner-bk1.jpg' %});">
+      <div class="container text-center text-md-left">
+        <h2 data-aos="fade" data-aos-easing="linear" data-aos-duration="1000" data-aos-once="true" class="display-3 text-white font-weight-bold my-5">
+          Identifikasi Gejala Penyakit  </br>
+          Tumbuhan Sejak Dini </br>
+          dengan Machine Learning </br></br>
+        </h2> 
+        <p data-aos="fade" data-aos-easing="linear" data-aos-duration="1000" data-aos-once="true" class="lead text-white my-4">
+          Sistem terintegrasi yang terdiri dari Machine Learning, IOT, Aplikasi Android, dan Website </br>
+          Tim AgroSphere - Olivia 2023 </br>
+          Universitas Gadjah Mada </br>
+          Sekolah Vokasi </br>
+        </p>
+        {% if 'session_id' in request.session %}
+        <a data-aos="fade" data-aos-easing="linear" data-aos-duration="1000" data-aos-once="true" class="btn my-4 font-weight-bold atlas-cta cta-green" href='{% url 'dashboard' %}'>Masuk ke Dashboard</a>
+        {% else %}
+          <a data-aos="fade" data-aos-easing="linear" data-aos-duration="1000" data-aos-once="true" class="btn my-4 font-weight-bold atlas-cta cta-green" href='{% url 'login_web' %}'>Login</a>
+        {% endif %}
+        
+      </div>
+    </div>
+    <div class="video-banner">
+      <video autoplay loop muted class='video-element'>
+        <source src="{% static 'video-banner.mp4' %}" type="video/mp4">
+      </video>
+      <div class="video-content">
+        </br>
+        <h1>Dengan IOT yang terintegrasi dengan sistem kami</h1>
+        </br>
+        <h1>Monitoring penyakit tumbuhan lebih cepat</h1>
+      </div>
+      <div class="video-overlay"></div>
+    </div>  
+    
+    <div class="container my-4 py-2 ">
+      <h2 class="text-center font-weight-bold my-4">Monitoring lebih Cepat dengan Sistem yang Lengkap</h2>
+      <div class="row">
+        <div data-aos="fade-up" data-aos-delay="0" data-aos-duration="1000" data-aos-once="true" class="col-md-6 text-center">
+          <img src="{% static 'img/robot_head.png' %}" alt="Anti-spam" class="mx-auto" />
+          <h4>Machine Learning</h4>
+          <p>Mendeteksi penyakit tumbuhan dengan akurasi diatas 85%</p>
+           Image by <a href="https://www.freepik.com/free-vector/artificial-intelligence-elements-collection-flat-style_2640526.htm#query=robot%20head%20logo&position=9&from_view=search&track=ais&uuid=109f9763-c6a0-4066-a755-bbd317196f22">Freepik</a> 
+        </div>
+        <div data-aos="fade-up" data-aos-delay="200" data-aos-duration="1000" data-aos-once="true" class="col-md-6 text-center">
+          <img src="{% static 'img/chip.png' %}" alt="Phishing Detect" class="mx-auto" />
+          <h4>IOT</h4>
+          <p>Kereta mini yang dilengkapi dengan kamera untuk monitoring</p>
+          Image by <a href="https://www.freepik.com/free-vector/artificial-intelligence-elements-collection-flat-style_2640526.htm#query=robot%20head%20logo&position=9&from_view=search&track=ais&uuid=109f9763-c6a0-4066-a755-bbd317196f22">Freepik</a> 
+        </div>
+        <div data-aos="fade-up" data-aos-delay="400" data-aos-duration="1000" data-aos-once="true" class="col-md-6 text-center">
+          <img src="{% static 'img/phone.png' %}" alt="Smart Scan" class="mx-auto" />
+          <h4>Aplikasi Android</h4>
+          <p>Mendeteksi Penyakit Tumbuhan Secara Langsung yang dilengkapi dengan rekomendasi penanganan</p>
+          <a href="https://www.freepik.com/free-vector/realistic-front-view-smartphone-mockup-mobile-iphone-purple-frame-with-blank-white-display-vector_33632332.htm#query=phone%20mockup&position=0&from_view=search&track=ais&uuid=89e9b3ec-ec11-4cbc-ab05-510742036a9c">Image by svstudioart</a> on Freepik
+        </div>
+        <div data-aos="fade-up" data-aos-delay="400" data-aos-duration="1000" data-aos-once="true" class="col-md-6 text-center">
+            <img src="{% static 'img/desktop_graph.png' %}" alt="Smart Scan" class="mx-auto" />
+            <h4>Website</h4>
+            <p>Dashboard website untuk melihat data perkembangan penyakit dan lainnya</p>
+            <a href="https://www.freepik.com/free-vector/computer_3099005.htm#query=desktop%20monitor%20vectir&position=0&from_view=search&track=ais&uuid=bd3f5383-cba6-45d3-8184-2fa7872bb3dd">Image by rawpixel.com</a> on Freepik</br>
+            <a href="https://www.freepik.com/free-vector/set-elements-chart-infographics-graphs-diagrams-chart-color_15573877.htm#query=graph%20vector&position=1&from_view=search&track=ais&uuid=64d6a143-9d5a-4b2f-9775-ecc778777016">Image by svstudioart</a> on Freepik
+        </div>        
+        
+        <p style='text-align: center; width: 100%; margin-top: 25px;'> catatan: Gambar yang kami gunakan bersifat bebas namun dibutuhkan attribution (ditampilkan sumbernya) </p>
+      </div>
+    </div>
+
+    {% comment %} <div class="jumbotron jumbotron-fluid feature" id="feature-first">
+      <div class="container my-5">
+        <div class="row justify-content-between text-center text-md-left">
+          <div data-aos="fade-right" data-aos-duration="1000" data-aos-once="true" class="col-md-6">
+            <h2 class="font-weight-bold">Take a look inside</h2>
+            <p class="my-4">
+              Te iisque labitur eos, nec sale argumentum scribentur no,
+              <br /> augue disputando in vim. Erat fugit sit at, ius lorem deserunt deterruisset no.
+            </p>
+            <a href="#" class="btn my-4 font-weight-bold atlas-cta cta-blue">Learn More</a>
+          </div>
+          <div data-aos="fade-left" data-aos-duration="1000" data-aos-once="true" class="col-md-6 align-self-center">
+            <img src="{% static 'img/feature-1.png' %}" alt="Take a look inside" class="mx-auto d-block" />
+          </div>
+        </div>
+      </div>
+    </div> {% endcomment %}
+
+
+    <script src="{% static 'js/aos.js' %}"></script>
+    <script>
+      AOS.init({})
+    </script>
+  </body>
+</html>

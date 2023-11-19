@@ -1,7 +1,4 @@
 (function($) {
-  "use strict"; // Start of use strict
-
-
   $("#sidebarToggle, #sidebarToggleTop").on('click', function(e) {
     $("body").toggleClass("sidebar-toggled");
     $(".sidebar").toggleClass("toggled");
@@ -52,4 +49,4 @@
     e.preventDefault();
   });
 
-})(jQuery); // End of use strict
+})(jQuery);

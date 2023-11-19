@@ -19,9 +19,10 @@ from authmanager.views import RegisterView, LoginView
 from storage import imageview
 from django.conf.urls.static import static
 from django.conf import settings
+from django.shortcuts import redirect
 
 urlpatterns = [
-    path('', LoginView.as_view(), name='login'),
+    path('', lambda request: redirect('splash'), name='initial_page'),
     path('admin/', admin.site.urls),
     path('api/v1/', include('plants.urls_api')), 
     path('', include('plants.urls_page')), 
