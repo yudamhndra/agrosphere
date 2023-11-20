@@ -1,7 +1,7 @@
-# BASIC CRUD API
+# Agrosphere
 
 > Django Rest Framework
 
-
-A simple CRUD API example with Django
 # agrofull
+
+# App dan ML beda branch di repo ini
