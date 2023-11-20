@@ -183,8 +183,6 @@ def detect_plant_disease(request):
                     
                     existing_history = DetectionHistory.objects.filter(plant_img=file_name).first()
 
-
-
                     try:
                         disease = Disease.objects.get(disease_type=condition)
                         recomendation = Recomendation.objects.get(disease_id=disease)
@@ -218,11 +216,7 @@ def detect_plant_disease(request):
                             'recomendation': recomendation_dict
                         }
 
-                        send_topic_push(
-                            'Penyakit Terdeteksi',
-                            f'Ada penyakit pada tanaman anda dengan jenis {condition}. Silahkan cek aplikasi untuk informasi lebih lanjut.',
-                            image_uri
-                        )
+
 
                         data_disease.append(data)
 
@@ -235,6 +229,13 @@ def detect_plant_disease(request):
                                 recommendation=recomendation
                             )
                             plant_history.save() 
+                            
+                            print("Image send :" + image_uri)
+                            send_topic_push(
+                                'Penyakit Terdeteksi',
+                                f'Ada penyakit pada tanaman anda dengan jenis {condition}. Silahkan cek aplikasi untuk informasi lebih lanjut.',
+                                image_uri
+                            )
                             
                     except Recomendation.DoesNotExist:
                         pass
@@ -343,12 +344,6 @@ def plants_segmentation(request):
                             'recomendation': recomendation_dict
                         }
 
-                        send_topic_push(
-                            'Penyakit Terdeteksi',
-                            f'Ada penyakit pada tanaman anda dengan jenis {condition}. Silahkan cek aplikasi untuk informasi lebih lanjut.',
-                            image_uri
-                        )
-
                         data_disease.append(data)
 
                         if not existing_history:
@@ -360,6 +355,14 @@ def plants_segmentation(request):
                                 recommendation=recomendation
                             )
                             plant_history.save() 
+                            
+                            print("Image send :" + image_uri)
+                            send_topic_push(
+                                'Penyakit Terdeteksi',
+                                f'Ada penyakit pada tanaman anda dengan jenis {condition}. Silahkan cek aplikasi untuk informasi lebih lanjut.',
+                                image_uri
+                            )
+                            
                     except Recomendation.DoesNotExist:
                         pass
 
