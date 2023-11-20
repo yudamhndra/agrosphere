@@ -51,16 +51,12 @@ print('Semantic Segmentation Model Loaded!')
 
 
 def get_plant_image(request, plant_id):
-    # Ambil objek tanaman berdasarkan ID
     plant = get_object_or_404(Plant, id=plant_id)
 
-    # Pastikan hanya pengguna yang sudah login yang dapat mengakses gambar
     if request.user.is_authenticated:
-        # Mengatur header respons untuk memastikan gambar dapat diakses
         response = HttpResponse(plant.plant_img.read(), content_type='image/jpeg')
         return response
     else:
-        # Pengguna yang tidak login tidak diijinkan mengakses gambar
         return HttpResponse(status=403)
 
 
@@ -68,7 +64,6 @@ def get_plant_image(request, plant_id):
 def create_plant(request):
     serializer = PlantSerializer(data=request.data)
     if serializer.is_valid():
-        # Create a new name based on database values
         plant_name = serializer.validated_data.get('plant_name')
         condition = serializer.validated_data.get('condition')
         disease = serializer.validated_data.get('disease')
@@ -159,7 +154,6 @@ def detect_plant_disease(request):
 
             print("predict")
 
-            # Now you can proceed with your detection logic using the 'image' variable
             predict_result = model.predict(image)
             data_disease = []
             file_name = ""
@@ -195,7 +189,6 @@ def detect_plant_disease(request):
                         disease = Disease.objects.get(disease_type=condition)
                         recomendation = Recomendation.objects.get(disease_id=disease)
 
-                        # Create a dictionary representing the Recomendation object
                         recomendation_dict = {
                             'disease_type': disease.disease_type,
                             'symptoms': recomendation.symptoms,
@@ -254,7 +247,6 @@ def detect_plant_disease(request):
             else:
                 message = "Tidak ada penyakit yang terdeteksi"
                 
-            # Response yang menggabungkan hasil detection dan hasil dari fungsi detect_plant_disease1
             response = {
                 'created_at': timezone.now(),
                 'leafs_disease': data_disease,
@@ -322,7 +314,6 @@ def plants_segmentation(request):
                         disease = Disease.objects.get(disease_type=condition)
                         recomendation = Recomendation.objects.get(disease_id=disease)
 
-                        # Create a dictionary representing the Recomendation object
                         recomendation_dict = {
                             'disease_type': disease.disease_type,
                             'symptoms': recomendation.symptoms,
@@ -379,8 +370,7 @@ def plants_segmentation(request):
                 message = "Penyakit tanaman berhasil dideteksi"
             else:
                 message = "Tidak ada penyakit yang terdeteksi"
-                
-            # Response yang menggabungkan hasil detection dan hasil dari fungsi detect_plant_disease1
+
             response = {
                 'created_at': timezone.now(),
                 'leafs_disease': data_disease,
@@ -442,7 +432,6 @@ def notification(request):
 @api_view(['GET', 'POST'])
 def notificationHistory(request):
     if request.method == 'GET':
-        # Mendapatkan semua notifikasi dari database
         notifications = Notification.objects.all()
         serializer = NotificationSerializer(notifications, many=True)
         return make_response(serializer.data, "Notification History", 200)

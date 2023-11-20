@@ -12,7 +12,7 @@ urlpatterns = [
     path('plants/<int:plant_id>/update/', (views.update_plant), name='update_plant'),
     path('plants/<int:plant_id>/delete/', (views.delete_plant), name='delete_plant'),
     
-    # api deteksi
+    # api detection
     path('plants/detection', PlantDetectionList.as_view(), name='plant-list'),
     path('plants/<int:pk>/', PlantDetectionDetail.as_view(), name='plant-detail'),
 
@@ -24,7 +24,7 @@ urlpatterns = [
     path('diseases/', views.DiseaseList.as_view(), name='disease-list'),
     path('recomendations/', views.RecomendationList.as_view(), name='recomendation-list'),
     
-    #apisegmentation
+    #api segmentation
     path('plants/segmentation', views.plants_segmentation, name='plant-segmentation'),
     path('plant-segmentation/history/', views.plants_segmentation, name='plant_segmentation_history'),
 
