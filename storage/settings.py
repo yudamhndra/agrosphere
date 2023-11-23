@@ -206,3 +206,4 @@ if not os.path.isdir(MEDIA_ROOT):
     os.mkdir(MEDIA_ROOT)
 
 
+DATA_UPLOAD_MAX_MEMORY_SIZE = 2621440*100

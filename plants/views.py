@@ -141,17 +141,25 @@ def download_media_file(request: WSGIRequest):
 
 
 def draw_bounding_boxes(image, boxes, labels):
+    print('len boxes', len(boxes))
     for box in boxes:
+        box = [int(i) for i in box.xywh[0]]
+        print('Box', box, len(box))
         if len(box) >= 4:
             x1, y1, x2, y2 = box[:4]
-            label = labels[int(box[4]) if len(box) > 4 else 0] 
+            label = labels[int(box[4])] if len(box) > 4 else labels[0]
+
+            print(f"Bounding Box: ({x1}, {y1}) - ({x2}, {y2}), Label: {label}")
 
             color = (0, 255, 0)
-            thickness = 2
+            box_thickness = 5
+            text_thickness = 2
 
-            cv2.rectangle(image, (int(x1), int(y1)), (int(x2), int(y2)), color, thickness)
-            cv2.putText(image, label, (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, thickness)
-
+            cv2.rectangle(image, (x1, y1), (x2, y2), color, box_thickness)
+            cv2.putText(image, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, text_thickness)
+    temp_address = 'box.png'
+    cv2.imwrite(temp_address, image)
+    print('temp image', temp_address)
     return image
 
 def detect_plant_disease(request):
@@ -174,17 +182,19 @@ def detect_plant_disease(request):
             print("predict")
 
             predict_result = model.predict(image)
+            image = cv2.resize(image, (800, 800))
             data_disease = []
             file_name = ""
             condition = ""
 
             for r in predict_result:
-                boxes = r.boxes
+                boxes = list(r.boxes)
 
                 image_with_boxes = draw_bounding_boxes(image.copy(), boxes, model.names)
 
                 file_name = f'{time.time()}_{threading.get_native_id()}.png'
                 file_path = os.path.join(settings.MEDIA_ROOT, file_name)
+                print(file_path, 'box', boxes)
                 cv2.imwrite(file_path, image_with_boxes)
 
                 for box in boxes:
@@ -194,13 +204,13 @@ def detect_plant_disease(request):
                     
                     plant_detection = PlantDetection(
                         user_id=1, 
-                        plant_img=file_name,
+                        plant_img=file_path,
                         plant_name="strawberry",  
                         condition=condition,
                     )
                     plant_detection.save()
                     
-                    existing_history = DetectionHistory.objects.filter(plant_img=file_name).first()
+                    existing_history = DetectionHistory.objects.filter(plant_img=file_path).first()
 
                     try:
                         disease = Disease.objects.get(disease_type=condition)
@@ -226,7 +236,7 @@ def detect_plant_disease(request):
 
                         print(recomendation_dict)
 
-                        image_uri = urljoin(f'http://{request.get_host()}', 'media/') + file_name
+                        image_uri = urljoin(f'http://{request.get_host()}', 'media/') + file_path
 
                         data = {
                             'created_at': timezone.now(),
@@ -242,7 +252,7 @@ def detect_plant_disease(request):
                         if not existing_history:
                             plant_history = DetectionHistory(
                                 source='detection',
-                                plant_img=file_name,
+                                plant_img=file_path,
                                 plant_name='strawberry',
                                 condition=condition,
                                 recommendation=recomendation
@@ -420,7 +430,10 @@ def detection_history(request):
     data = serializer.data
     for entry in data:
         entry['image_url'] = urljoin(f'http://{request.get_host()}', 'media/') + entry['plant_img']
-        entry['recommendation'] = model_to_dict(Recomendation.objects.get(pk=entry['recommendation']))
+        try:
+            entry['recommendation'] = model_to_dict(Recomendation.objects.get(pk=entry['recommendation']))
+        except:
+            entry['recommendation'] = model_to_dict(Recomendation.objects.get(symptoms='Belum terdeteksi'))
 
     return make_response(data=data, status_code=200)
 
