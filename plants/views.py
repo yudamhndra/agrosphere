@@ -7,6 +7,8 @@ import threading
 import os
 import mimetypes
 import hashlib
+import pytz
+from datetime import datetime, timedelta
 
 from urllib.parse import urljoin
 from django.core.handlers.wsgi import WSGIRequest
@@ -15,8 +17,10 @@ from django.conf import settings
 from django.db.models import F
 from django.urls import reverse as url_reverse
 from django.utils import timezone
+# from django.utils import timezone
 from django.shortcuts import render, redirect
 from django.forms.models import model_to_dict
+
 
 from firebase.auth_firebase import send_topic_push
 from .models import *
@@ -49,6 +53,21 @@ print('Semantic Segmentation Model Loaded!')
 
 '''Klasifikasi'''
 
+
+def convert_time_to_gmt7_indonesia(time):
+    # Set the timezone to GMT+7 Indonesia
+    timezone.activate(timezone('Asia/Jakarta'))
+
+    # Convert the time to the local timezone
+    local_time = timezone.now()
+
+    # Calculate the offset between the local timezone and GMT+7 Indonesia
+    offset = local_time.tzinfo.utcoffset(local_time)
+
+    # Convert the time to GMT+7 Indonesia
+    gmt7_indonesia_time = time - offset
+
+    return gmt7_indonesia_time
 
 def get_plant_image(request, plant_id):
     plant = get_object_or_404(Plant, id=plant_id)
@@ -508,14 +527,25 @@ def register(request: WSGIRequest):
 
 @web_login_wrap
 def dashboard(request: WSGIRequest):
-    month_count = {num:0 for num in range(1, 13)}
+    month_count = {num: 0 for num in range(1, 13)}
     groupped_detections = [[]]
-    for detection in DetectionHistory.objects.all():
-        if len(groupped_detections[-1])==4:
+
+    for detection in DetectionHistory.objects.all().order_by('-created_at'):
+        if len(groupped_detections[-1]) == 4:
             groupped_detections.append([])
-        groupped_detections[-1].append({'plant_img': urljoin(f'http://{request.get_host()}', 'media/') + detection.plant_img, 'condition': detection.condition})
-        month_detected = detection.updated_at.date().month
-        if not (month_detected in month_count):
+
+        detected_time = timezone.localtime(detection.created_at, timezone.get_fixed_timezone(420))
+        detected_time_utc7 = detected_time.astimezone(timezone.utc) + timedelta(minutes=420)
+
+        groupped_detections[-1].append({
+            'plant_img': urljoin(f'http://{request.get_host()}', 'media/') + detection.plant_img,
+            'condition': detection.condition,
+            'created_at_date': detected_time_utc7.date(),
+            'created_at_clock': detected_time_utc7.time()
+        })
+
+        month_detected = detected_time_utc7.date().month
+        if month_detected not in month_count:
             month_count[month_detected] = 1
         else:
             month_count[month_detected] += 1
