@@ -1,8 +1,0 @@
-Django==4.2.6
-ultralytics
-django-allauth
-djangorestframework
-djangorestframework-simplejwt
-numpy
-opencv-python
-Pillow

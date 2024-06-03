@@ -190,3 +190,6 @@ media
 #node
 /node_modules/
 
+#db
+db.sqlite3
+

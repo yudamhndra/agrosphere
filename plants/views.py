@@ -48,7 +48,17 @@ print('Semantic Segmentation Model Loaded!')
 
 
 '''Klasifikasi'''
+def convert_time_to_gmt7_indonesia(time):
 
+    timezone.activate(timezone('Asia/Jakarta'))
+
+    local_time = timezone.now()
+
+    offset = local_time.tzinfo.utcoffset(local_time)
+
+    gmt7_indonesia_time = time - offset
+
+    return gmt7_indonesia_time
 
 def get_plant_image(request, plant_id):
     plant = get_object_or_404(Plant, id=plant_id)
@@ -122,17 +132,25 @@ def download_media_file(request: WSGIRequest):
 
 
 def draw_bounding_boxes(image, boxes, labels):
+    print('len boxes', len(boxes))
     for box in boxes:
+        box = [int(i) for i in box.xywh[0]]
+        print('Box', box, len(box))
         if len(box) >= 4:
             x1, y1, x2, y2 = box[:4]
-            label = labels[int(box[4]) if len(box) > 4 else 0] 
+            label = labels[int(box[4])] if len(box) > 4 else labels[0]
 
-            color = (0, 255, 0)
-            thickness = 2
+            print(f"Bounding Box: ({x1}, {y1}) - ({x2}, {y2}), Label: {label}")
 
-            cv2.rectangle(image, (int(x1), int(y1)), (int(x2), int(y2)), color, thickness)
-            cv2.putText(image, label, (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, thickness)
+            color = (0, 0, 255)
+            box_thickness = int((image.shape[0])/500)
+            text_thickness = int((image.shape[0])/500)
 
+            cv2.rectangle(image, (x1, y1), (x2, y2), color, box_thickness)
+            cv2.putText(image, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, text_thickness)
+    file_path = os.path.join('AgroSphere', 'media')
+    cv2.imwrite(file_path, image)
+    print('temp image', file_path)
     return image
 
 def detect_plant_disease(request):
@@ -155,18 +173,15 @@ def detect_plant_disease(request):
             print("predict")
 
             predict_result = model.predict(image)
+            # image = cv2.resize(image, (800, 800))
             data_disease = []
             file_name = ""
             condition = ""
 
             for r in predict_result:
-                boxes = r.boxes
+                boxes = list(r.boxes)
 
                 image_with_boxes = draw_bounding_boxes(image.copy(), boxes, model.names)
-
-                file_name = f'{time.time()}_{threading.get_native_id()}.png'
-                file_path = os.path.join(settings.MEDIA_ROOT, file_name)
-                cv2.imwrite(file_path, image_with_boxes)
 
                 for box in boxes:
                     c = box.cls
@@ -183,6 +198,26 @@ def detect_plant_disease(request):
                     
                     existing_history = DetectionHistory.objects.filter(plant_img=file_name).first()
 
+                file_name = f'{time.time()}_{threading.get_native_id()}.png'
+                file_path = os.path.join(settings.MEDIA_ROOT, file_name)
+                print(file_path, 'box', boxes)
+                cv2.imwrite(file_path, image_with_boxes) 
+
+                for box in boxes:
+                    c = box.cls
+                    condition = model.names[int(c)]
+                    print("Condition " + condition)
+                    
+                    plant_detection = Plant(
+                        user_id=1, 
+                        plant_img=file_name,
+                        plant_name="strawberry",  
+                        condition=condition,
+                    )
+                    plant_detection.save()
+                    
+                    existing_history = DetectionHistory.objects.filter(plant_img=file_name).first()
+                    
                     try:
                         disease = Disease.objects.get(disease_type=condition)
                         recomendation = Recomendation.objects.get(disease_id=disease)
@@ -209,14 +244,14 @@ def detect_plant_disease(request):
 
                         image_uri = urljoin(f'http://{request.get_host()}', 'media/') + file_name
 
+                        img_url_notif = urljoin(f'http://{request.get_host()}:8000', 'media/') + file_name
+
                         data = {
                             'created_at': timezone.now(),
                             'condition': condition,
                             'image_uri': image_uri,
                             'recomendation': recomendation_dict
                         }
-
-
 
                         data_disease.append(data)
 
@@ -230,12 +265,17 @@ def detect_plant_disease(request):
                             )
                             plant_history.save() 
                             
-                            print("Image send :" + image_uri)
-                            send_topic_push(
-                                'Penyakit Terdeteksi',
-                                f'Ada penyakit pada tanaman anda dengan jenis {condition}. Silahkan cek aplikasi untuk informasi lebih lanjut.',
-                                image_uri
-                            )
+                            print("Image send :" + img_url_notif)
+                            for user in User.objects.all():
+                                try:
+                                    send_topic_push(
+                                        'Penyakit Terdeteksi',
+                                        f'Ada penyakit pada tanaman anda dengan jenis {condition}. Silahkan cek aplikasi untuk informasi lebih lanjut.',
+                                        user.id,
+                                        img_url_notif
+                                    )
+                                except Exception as e:
+                                    print('error kirim notif: ', str(e))
                             
                     except Recomendation.DoesNotExist:
                         pass
@@ -387,7 +427,6 @@ def plants_segmentation(request):
     else:
         return make_response(status_code=405, message='Method not allowed')
 
-  
 def detection_history(request):
     json_body = json.loads(request.body)
     last_start = json_body['last_start']

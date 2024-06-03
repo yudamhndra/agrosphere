@@ -29,7 +29,7 @@ class RegisterView(generics.CreateAPIView):
             return make_response({}, 'Register berhasil', status_code=status.HTTP_201_CREATED)
 
         return make_response({}, 'Register gagal', status_code=status.HTTP_400_BAD_REQUEST,
-                             error_data=serializer.errors)
+            error_data=serializer.errors)
 
 
 class LoginView(generics.CreateAPIView):
@@ -61,4 +61,4 @@ class LoginView(generics.CreateAPIView):
             else:
                 return make_response(None, 'Invalid login credentials', status_code=status.HTTP_401_UNAUTHORIZED)
         return make_response(None, 'Login gagal', status_code=status.HTTP_400_BAD_REQUEST,
-                             error_data=serializer.errors)
+            error_data=serializer.errors)
