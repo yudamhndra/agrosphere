@@ -49,3 +49,8 @@ This project aims to develop a system for detecting plant diseases and providing
 ## Contributing
 
 Contributions are welcome! If you find any issues or have suggestions for improvements, please open an issue or submit a pull request.
+
+## More About AgroSphere
+
+The following is a short video regarding the implementation of agrosphere: 
+https://drive.google.com/file/d/1dVEJ3modKd9sBD6BBof_8Mldh4AZOM7g/view?usp=sharing
