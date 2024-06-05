@@ -15,7 +15,7 @@ This project aims to develop a system for detecting plant diseases and providing
 
 ## Installation
 
-1. Clone the repository (highly recommended to use the 'yuda' branch which has minimal issues):
+1. Clone the repository (highly recommended to use the 'yuda' branch which has minimum issues):
 
    ```bash
    git clone https://github.com/yudamhndra/agrosphere.git
