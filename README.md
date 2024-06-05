@@ -46,7 +46,7 @@ This project aims to develop a system for detecting plant diseases and providing
 
 ## Achievements
 This project won Second Place at the Olimpiade Vokasi Indonesia (OLIVIA) 2023 in the field of Smart Systems: Smart Applications.
-<img src="https://raw.githubusercontent.com/yudamhndra/yudamhndra/main/images/sertif_olivia.jpg" alt="OLIVIA Certificate">
+<img src="https://github.com/yudamhndra/yudamhndra/main/images/sertif_olivia.jpg" alt="OLIVIA Certificate">
 
 ## Contributing
 
