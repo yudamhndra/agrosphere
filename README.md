@@ -1,5 +1,3 @@
-Sure, here's a README for the project:
-
 # Plant Disease Detection and Early Warning System Using AIoT-Based Autonomous Vehicles
 
 This project aims to develop a system for detecting plant diseases and providing early warnings using autonomous vehicles based on the AIoT (Artificial Intelligence of Things) concept. The system comprises several components, including a Django web application, a RESTful API, an autonomous vehicle (IoT) equipped with an ESP32-CAM, and an Android app.
