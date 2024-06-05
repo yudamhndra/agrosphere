@@ -44,6 +44,9 @@ This project aims to develop a system for detecting plant diseases and providing
 3. The autonomous vehicle will capture plant images, send them to the server for disease detection, and the system will provide early warnings if necessary.
 4. Users can monitor the system and receive alerts through the Android app.
 
+## Achievements
+This project won Second Place at the Olimpiade Vokasi Indonesia (OLIVIA) 2023 in the field of Smart Systems: Smart Applications.
+
 ## Contributing
 
 Contributions are welcome! If you find any issues or have suggestions for improvements, please open an issue or submit a pull request.
